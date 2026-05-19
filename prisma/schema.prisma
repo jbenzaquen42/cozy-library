@@ -1,0 +1,204 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum CopyStatus {
+  AVAILABLE
+  LOANED
+}
+
+enum UploadedImageKind {
+  COVER_PHOTO
+  SPINE_PHOTO
+  CACHED_COVER
+}
+
+model Book {
+  id             String   @id @default(uuid())
+  title          String
+  subtitle       String?
+  displayAuthor  String
+  isbn10         String?  @unique
+  isbn13         String?  @unique
+  publisher      String?
+  publishedDate  String?
+  pageCount      Int?
+  language       String?
+  description    String?
+  categories     Json     @default("[]")
+  seriesName     String?
+  seriesNumber   String?
+  coverImagePath String?
+  metadataJson   Json     @default("{}")
+  metadataSource String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  copies  Copy[]
+  authors BookAuthor[]
+  images  UploadedImage[]
+
+  @@index([title])
+  @@index([displayAuthor])
+}
+
+model MetadataCache {
+  id           String   @id @default(uuid())
+  provider     String
+  lookupKey    String
+  responseJson Json
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([provider, lookupKey])
+  @@index([provider])
+  @@index([lookupKey])
+}
+
+model UploadedImage {
+  id        String            @id @default(uuid())
+  kind      UploadedImageKind
+  filePath  String
+  mimeType  String
+  sourceUrl String?
+  bookId    String?
+  createdAt DateTime          @default(now())
+
+  book Book? @relation(fields: [bookId], references: [id], onDelete: SetNull)
+
+  @@index([bookId])
+  @@index([kind])
+}
+
+model Author {
+  id        String   @id @default(uuid())
+  name      String
+  sortName  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  books BookAuthor[]
+
+  @@unique([name])
+  @@index([sortName])
+}
+
+model BookAuthor {
+  bookId   String
+  authorId String
+  position Int
+
+  book   Book   @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  author Author @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@id([bookId, authorId])
+  @@index([authorId])
+}
+
+model Copy {
+  id             String     @id @default(uuid())
+  bookId         String
+  copyLabel      String
+  locationSlotId String
+  condition      String?
+  notes          String?
+  status         CopyStatus @default(AVAILABLE)
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  book         Book      @relation(fields: [bookId], references: [id], onDelete: Restrict)
+  locationSlot ShelfSlot @relation(fields: [locationSlotId], references: [id], onDelete: Restrict)
+  loans        Loan[]
+
+  @@unique([bookId, copyLabel])
+  @@index([bookId])
+  @@index([locationSlotId])
+  @@index([status])
+}
+
+model Loan {
+  id           String    @id @default(uuid())
+  copyId       String
+  borrowerName String
+  dateLoaned   DateTime  @default(now())
+  dateReturned DateTime?
+  notes        String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  copy Copy @relation(fields: [copyId], references: [id], onDelete: Restrict)
+
+  @@index([copyId])
+  @@index([borrowerName])
+  @@index([dateReturned])
+}
+
+model HouseLevel {
+  id        String   @id @default(uuid())
+  name      String
+  sceneKey  String   @unique
+  sortOrder Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  rooms Room[]
+
+  @@index([sceneKey])
+}
+
+model Room {
+  id        String   @id @default(uuid())
+  levelId   String
+  name      String
+  sceneKey  String   @unique
+  sortOrder Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  level       HouseLevel  @relation(fields: [levelId], references: [id], onDelete: Cascade)
+  bookshelves Bookshelf[]
+
+  @@index([levelId])
+  @@index([sceneKey])
+}
+
+model Bookshelf {
+  id         String   @id @default(uuid())
+  roomId     String
+  name       String
+  sceneKey   String   @unique
+  rowCount   Int
+  depthCount Int
+  sortOrder  Int
+  widthUnits Int      @default(1)
+  notes      String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  room  Room        @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  slots ShelfSlot[]
+
+  @@index([roomId])
+  @@index([sceneKey])
+}
+
+model ShelfSlot {
+  id          String   @id @default(uuid())
+  bookshelfId String
+  rowIndex    Int
+  depthIndex  Int
+  label       String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  bookshelf Bookshelf @relation(fields: [bookshelfId], references: [id], onDelete: Cascade)
+  copies    Copy[]
+
+  @@unique([bookshelfId, rowIndex, depthIndex])
+  @@index([bookshelfId])
+}

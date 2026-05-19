@@ -1,0 +1,22 @@
+
+> cozy-library@0.1.0 dev
+> next dev
+
+▲ Next.js 16.2.6 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://100.64.159.32:3000
+✓ Ready in 1757ms
+
+○ Compiling / ...
+ GET / 200 in 3.9s (next.js: 3.7s, application-code: 216ms)
+ GET / 200 in 123ms (next.js: 42ms, application-code: 81ms)
+ GET /scan 200 in 1131ms (next.js: 1109ms, application-code: 22ms)
+ GET /settings 200 in 1176ms (next.js: 490ms, application-code: 686ms)
+ GET /settings 200 in 271ms (next.js: 101ms, application-code: 170ms)
+✓ Compiled in 243ms
+✓ Compiled in 296ms
+ GET /settings 200 in 276ms (next.js: 68ms, application-code: 208ms)
+ GET /settings 200 in 109ms (next.js: 5ms, application-code: 104ms)
+ GET /settings 200 in 75ms (next.js: 7ms, application-code: 69ms)
+ GET /settings 200 in 76ms (next.js: 37ms, application-code: 39ms)
+[?25h

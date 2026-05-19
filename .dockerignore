@@ -1,0 +1,11 @@
+node_modules
+.next
+out
+dist
+coverage
+.env
+.env*.local
+playwright-report
+test-results
+npm-debug.log*
+cozy_home_library_blender_docs_v3

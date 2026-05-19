@@ -1,0 +1,12 @@
+node_modules
+.next
+out
+dist
+coverage
+.env
+.env*.local
+cozy_home_library_blender_docs_v3/
+playwright-report
+test-results
+npm-debug.log*
+tsconfig.tsbuildinfo
