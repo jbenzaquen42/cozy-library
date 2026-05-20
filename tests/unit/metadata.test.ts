@@ -125,7 +125,7 @@ describe("Hardcover metadata provider", () => {
   });
 
   it("skips Hardcover lookup without a server-side token", async () => {
-    process.env.HARDCOVER_API_TOKEN_FILE = "D:/definitely-missing-hardcover-token.txt";
+    process.env.HARDCOVER_API_TOKEN_FILE = "/definitely-missing-hardcover-token.txt";
     const fetchMock = vi.fn();
     vi.stubGlobal("fetch", fetchMock);
 

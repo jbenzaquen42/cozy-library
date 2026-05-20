@@ -10,6 +10,10 @@ export type HouseBrowserCopy = {
   displayAuthor: string;
 };
 
+export type HouseBrowserUnshelvedCopy = HouseBrowserCopy & {
+  createdAt: Date;
+};
+
 export type HouseBrowserSlot = {
   id: string;
   rowIndex: number;
@@ -24,6 +28,23 @@ export type HouseBrowserShelf = {
   sceneKey: string;
   rowCount: number;
   depthCount: number;
+  sortOrder: number;
+  widthUnits: number;
+  presetName: string | null;
+  widthMeters: number | null;
+  heightMeters: number | null;
+  depthMeters: number | null;
+  positionX: number | null;
+  positionY: number | null;
+  positionZ: number | null;
+  rotationX: number | null;
+  rotationY: number | null;
+  rotationZ: number | null;
+  frameColor: string | null;
+  shelfColor: string | null;
+  trimColor: string | null;
+  notes: string | null;
+  roomId: string;
   roomName: string;
   levelName: string;
   slots: HouseBrowserSlot[];
@@ -85,6 +106,23 @@ export async function getHouseBrowserData(db: PrismaClient = defaultPrisma): Pro
         sceneKey: shelf.sceneKey,
         rowCount: shelf.rowCount,
         depthCount: shelf.depthCount,
+        sortOrder: shelf.sortOrder,
+        widthUnits: shelf.widthUnits,
+        presetName: shelf.presetName,
+        widthMeters: shelf.widthMeters,
+        heightMeters: shelf.heightMeters,
+        depthMeters: shelf.depthMeters,
+        positionX: shelf.positionX,
+        positionY: shelf.positionY,
+        positionZ: shelf.positionZ,
+        rotationX: shelf.rotationX,
+        rotationY: shelf.rotationY,
+        rotationZ: shelf.rotationZ,
+        frameColor: shelf.frameColor,
+        shelfColor: shelf.shelfColor,
+        trimColor: shelf.trimColor,
+        notes: shelf.notes,
+        roomId: room.id,
         roomName: room.name,
         levelName: level.name,
         slots: shelf.slots.map((slot) => ({

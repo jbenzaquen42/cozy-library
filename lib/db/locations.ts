@@ -14,9 +14,9 @@ import type {
 } from "../validation/location";
 
 export async function listLocations(input: ListLocationsInput = { includeSlots: true }, db: PrismaClient = defaultPrisma) {
-  void input;
+  const includeSlots = input.includeSlots ?? true;
 
-  return db.houseLevel.findMany({
+  const levels = await db.houseLevel.findMany({
     orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
     include: {
       rooms: {
@@ -34,6 +34,21 @@ export async function listLocations(input: ListLocationsInput = { includeSlots: 
       },
     },
   });
+
+  if (!includeSlots) {
+    return levels.map((level) => ({
+      ...level,
+      rooms: level.rooms.map((room) => ({
+        ...room,
+        bookshelves: room.bookshelves.map((bookshelf) => ({
+          ...bookshelf,
+          slots: [],
+        })),
+      })),
+    }));
+  }
+
+  return levels;
 }
 
 async function createMissingSlots(bookshelfId: string, rowCount: number, depthCount: number, db: PrismaClient) {
@@ -164,51 +179,51 @@ export async function deleteBookshelf(id: string, db: PrismaClient = defaultPris
 }
 
 export async function reorderLevel(input: ReorderInput, db: PrismaClient = defaultPrisma) {
-  return reorderWithinScope("houseLevel", input, {}, db);
+  const current = await db.houseLevel.findUniqueOrThrow({ where: { id: input.id }, select: { sortOrder: true } });
+  const movingUp = input.direction === "up";
+  const neighbor = await db.houseLevel.findFirst({
+    where: { sortOrder: movingUp ? { lt: current.sortOrder } : { gt: current.sortOrder } },
+    orderBy: { sortOrder: movingUp ? "desc" : "asc" },
+    select: { id: true, sortOrder: true },
+  });
+  if (!neighbor) return { changed: false };
+  await db.$transaction([
+    db.houseLevel.update({ where: { id: input.id }, data: { sortOrder: neighbor.sortOrder } }),
+    db.houseLevel.update({ where: { id: neighbor.id }, data: { sortOrder: current.sortOrder } }),
+  ]);
+  return { changed: true };
 }
 
 export async function reorderRoom(input: ReorderInput, db: PrismaClient = defaultPrisma) {
   const room = await db.room.findUniqueOrThrow({ where: { id: input.id }, select: { levelId: true } });
-  return reorderWithinScope("room", input, { levelId: room.levelId }, db);
+  const current = await db.room.findUniqueOrThrow({ where: { id: input.id }, select: { sortOrder: true } });
+  const movingUp = input.direction === "up";
+  const neighbor = await db.room.findFirst({
+    where: { levelId: room.levelId, sortOrder: movingUp ? { lt: current.sortOrder } : { gt: current.sortOrder } },
+    orderBy: { sortOrder: movingUp ? "desc" : "asc" },
+    select: { id: true, sortOrder: true },
+  });
+  if (!neighbor) return { changed: false };
+  await db.$transaction([
+    db.room.update({ where: { id: input.id }, data: { sortOrder: neighbor.sortOrder } }),
+    db.room.update({ where: { id: neighbor.id }, data: { sortOrder: current.sortOrder } }),
+  ]);
+  return { changed: true };
 }
 
 export async function reorderBookshelf(input: ReorderInput, db: PrismaClient = defaultPrisma) {
   const bookshelf = await db.bookshelf.findUniqueOrThrow({ where: { id: input.id }, select: { roomId: true } });
-  return reorderWithinScope("bookshelf", input, { roomId: bookshelf.roomId }, db);
-}
-
-type ReorderModel = "houseLevel" | "room" | "bookshelf";
-
-async function reorderWithinScope(model: ReorderModel, input: ReorderInput, scope: Record<string, string>, db: PrismaClient) {
-  const delegate = db[model] as unknown as {
-    findUniqueOrThrow: (args: { where: { id: string }; select: { sortOrder: true } }) => Promise<{ sortOrder: number }>;
-    findFirst: (args: {
-      where: Record<string, unknown>;
-      orderBy: { sortOrder: "asc" | "desc" };
-      select: { id: true; sortOrder: true };
-    }) => Promise<{ id: string; sortOrder: number } | null>;
-    update: (args: { where: { id: string }; data: { sortOrder: number } }) => Promise<unknown>;
-  };
-
-  const current = await delegate.findUniqueOrThrow({ where: { id: input.id }, select: { sortOrder: true } });
+  const current = await db.bookshelf.findUniqueOrThrow({ where: { id: input.id }, select: { sortOrder: true } });
   const movingUp = input.direction === "up";
-  const neighbor = await delegate.findFirst({
-    where: {
-      ...scope,
-      sortOrder: movingUp ? { lt: current.sortOrder } : { gt: current.sortOrder },
-    },
+  const neighbor = await db.bookshelf.findFirst({
+    where: { roomId: bookshelf.roomId, sortOrder: movingUp ? { lt: current.sortOrder } : { gt: current.sortOrder } },
     orderBy: { sortOrder: movingUp ? "desc" : "asc" },
     select: { id: true, sortOrder: true },
   });
-
-  if (!neighbor) {
-    return { changed: false };
-  }
-
+  if (!neighbor) return { changed: false };
   await db.$transaction([
-    delegate.update({ where: { id: input.id }, data: { sortOrder: neighbor.sortOrder } }),
-    delegate.update({ where: { id: neighbor.id }, data: { sortOrder: current.sortOrder } }),
-  ] as never);
-
+    db.bookshelf.update({ where: { id: input.id }, data: { sortOrder: neighbor.sortOrder } }),
+    db.bookshelf.update({ where: { id: neighbor.id }, data: { sortOrder: current.sortOrder } }),
+  ]);
   return { changed: true };
 }

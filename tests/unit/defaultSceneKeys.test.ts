@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DEFAULT_HOUSE_LAYOUT, generateShelfSlots, getDefaultShelfSlotCount } from "../../lib/scene/defaultSceneKeys";
+import { DEFAULT_HOUSE_LAYOUT, generateShelfSlots, getDefaultActiveLivingRoomShelfSceneKey, getDefaultLivingRoomShelfSceneKeys, getDefaultShelfSlotCount } from "../../lib/scene/defaultSceneKeys";
 import { getNextCopyLabel } from "../../lib/db/copies";
 
 describe("default house scene keys", () => {
@@ -31,15 +31,15 @@ describe("default house scene keys", () => {
             name: "Hallway",
             sceneKey: "room.upstairs.hallway",
             shelves: [
-              { sceneKey: "shelf.upstairs.hallway.bookcase-1", rowCount: 4, depthCount: 2 },
-              { sceneKey: "shelf.upstairs.hallway.bookcase-2", rowCount: 4, depthCount: 2 },
-              { sceneKey: "shelf.upstairs.hallway.bookcase-3", rowCount: 4, depthCount: 2 },
+              { sceneKey: "shelf.upstairs.hallway.bookcase-1", rowCount: 3, depthCount: 2 },
+              { sceneKey: "shelf.upstairs.hallway.bookcase-2", rowCount: 3, depthCount: 2 },
+              { sceneKey: "shelf.upstairs.hallway.bookcase-3", rowCount: 3, depthCount: 2 },
             ],
           },
           {
             name: "Reading Room / Study",
             sceneKey: "room.upstairs.study",
-            shelves: [{ sceneKey: "shelf.upstairs.study.study-shelf", rowCount: 5, depthCount: 2 }],
+            shelves: [{ sceneKey: "shelf.upstairs.study.study-shelf", rowCount: 4, depthCount: 2 }],
           },
         ],
       },
@@ -56,7 +56,18 @@ describe("default house scene keys", () => {
   });
 
   it("counts all default shelf slots", () => {
-    expect(getDefaultShelfSlotCount()).toBe(44);
+    expect(getDefaultShelfSlotCount()).toBe(36);
+  });
+
+  it("defines the living-room browser shelf order and default active shelf", () => {
+    expect(getDefaultActiveLivingRoomShelfSceneKey()).toBe("shelf.downstairs.entry.entry-shelf");
+    expect(getDefaultLivingRoomShelfSceneKeys()).toEqual([
+      "shelf.downstairs.entry.entry-shelf",
+      "shelf.upstairs.hallway.bookcase-1",
+      "shelf.upstairs.hallway.bookcase-2",
+      "shelf.upstairs.hallway.bookcase-3",
+      "shelf.upstairs.study.study-shelf",
+    ]);
   });
 
   it("rejects invalid row and depth counts", () => {

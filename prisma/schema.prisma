@@ -104,15 +104,15 @@ model Copy {
   id             String     @id @default(uuid())
   bookId         String
   copyLabel      String
-  locationSlotId String
+  locationSlotId String?
   condition      String?
   notes          String?
   status         CopyStatus @default(AVAILABLE)
   createdAt      DateTime   @default(now())
   updatedAt      DateTime   @updatedAt
 
-  book         Book      @relation(fields: [bookId], references: [id], onDelete: Restrict)
-  locationSlot ShelfSlot @relation(fields: [locationSlotId], references: [id], onDelete: Restrict)
+  book         Book       @relation(fields: [bookId], references: [id], onDelete: Restrict)
+  locationSlot ShelfSlot? @relation(fields: [locationSlotId], references: [id], onDelete: SetNull)
   loans        Loan[]
 
   @@unique([bookId, copyLabel])
@@ -168,17 +168,30 @@ model Room {
 }
 
 model Bookshelf {
-  id         String   @id @default(uuid())
-  roomId     String
-  name       String
-  sceneKey   String   @unique
-  rowCount   Int
-  depthCount Int
-  sortOrder  Int
-  widthUnits Int      @default(1)
-  notes      String?
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id           String   @id @default(uuid())
+  roomId       String
+  name         String
+  sceneKey     String   @unique
+  rowCount     Int
+  depthCount   Int
+  sortOrder    Int
+  widthUnits   Int      @default(1)
+  presetName   String?
+  widthMeters  Float?
+  heightMeters Float?
+  depthMeters  Float?
+  positionX    Float?
+  positionY    Float?
+  positionZ    Float?
+  rotationX    Float?
+  rotationY    Float?
+  rotationZ    Float?
+  frameColor   String?
+  shelfColor   String?
+  trimColor    String?
+  notes        String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   room  Room        @relation(fields: [roomId], references: [id], onDelete: Cascade)
   slots ShelfSlot[]

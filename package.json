@@ -11,45 +11,41 @@
     "test": "vitest run --passWithNoTests",
     "test:e2e": "playwright test",
     "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate deploy",
     "db:push": "prisma db push",
     "db:seed": "prisma db seed",
     "demo:seed": "tsx prisma/demoCatalog.ts seed",
     "demo:clear": "tsx prisma/demoCatalog.ts clear",
-    "demo:enrich": "tsx prisma/demoCatalog.ts enrich"
+    "demo:enrich": "tsx prisma/demoCatalog.ts enrich",
+    "demo:ensure": "tsx prisma/demoCatalog.ts ensure"
   },
   "dependencies": {
-    "@prisma/client": "^6.19.3",
-    "@react-three/drei": "^10.7.7",
-    "@react-three/fiber": "^9.6.1",
-    "@trpc/client": "^11.17.0",
-    "@trpc/server": "^11.17.0",
-    "@zxing/browser": "^0.2.0",
-    "lucide-react": "latest",
-    "next": "latest",
-    "react": "latest",
-    "react-dom": "latest",
-    "superjson": "^2.2.6",
-    "tesseract.js": "^5.1.1",
-    "three": "^0.184.0",
-    "zod": "^4.4.3"
+    "@prisma/client": "6.19.3",
+    "@zxing/browser": "0.2.0",
+    "dotenv": "17.2.3",
+    "lucide-react": "1.16.0",
+    "next": "16.2.6",
+    "react": "19.2.6",
+    "react-dom": "19.2.6",
+    "tesseract.js": "5.1.1",
+    "zod": "4.4.3"
   },
   "devDependencies": {
-    "@playwright/test": "latest",
-    "@tailwindcss/postcss": "latest",
-    "@types/node": "latest",
-    "@types/react": "latest",
-    "@types/react-dom": "latest",
-    "@types/three": "^0.184.1",
-    "eslint": "latest",
-    "eslint-config-next": "latest",
-    "postcss": "latest",
-    "prisma": "^6.19.3",
-    "tailwindcss": "latest",
-    "tsx": "^4.22.2",
-    "typescript": "latest",
-    "vitest": "latest"
+    "@playwright/test": "1.60.0",
+    "@tailwindcss/postcss": "4.3.0",
+    "@types/node": "25.9.0",
+    "@types/react": "19.2.14",
+    "@types/react-dom": "19.2.3",
+    "eslint": "9.39.4",
+    "eslint-config-next": "16.2.6",
+    "postcss": "8.5.14",
+    "prisma": "6.19.3",
+    "tailwindcss": "4.3.0",
+    "tsx": "4.22.2",
+    "typescript": "6.0.3",
+    "vitest": "4.1.6"
   },
-  "prisma": {
-    "seed": "tsx prisma/seed.ts"
+  "overrides": {
+    "postcss": "8.5.14"
   }
 }

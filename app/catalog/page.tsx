@@ -11,19 +11,23 @@ import { searchInputSchema, type SearchInput } from "@/lib/validation/search";
 export const dynamic = "force-dynamic";
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
+type LocationLevels = Awaited<ReturnType<typeof listLocations>>;
+type LocationLevel = LocationLevels[number];
+type LocationRoom = LocationLevel["rooms"][number] & { levelName?: string };
+type LocationShelf = LocationRoom["bookshelves"][number] & { roomName?: string; levelName?: string };
 
 export default async function CatalogPage({ searchParams }: { searchParams: SearchParams }) {
   const rawParams = await searchParams;
   const input = parseSearchParams(rawParams);
-  const [results, levels] = await Promise.all([searchCatalog(input), listLocations({ includeSlots: true })]);
+  const [catalogResults, levels] = await Promise.all([searchCatalog(input), listLocations({ includeSlots: true })]);
   const view = input.view;
-  const rooms = levels.flatMap((level) => level.rooms.map((room) => ({ ...room, levelName: level.name })));
-  const shelves = rooms.flatMap((room) => room.bookshelves.map((shelf) => ({ ...shelf, roomName: room.name, levelName: room.levelName })));
+  const rooms = levels.flatMap((level: LocationLevel) => level.rooms.map((room: LocationLevel["rooms"][number]) => ({ ...room, levelName: level.name })));
+  const shelves = rooms.flatMap((room: LocationRoom) => room.bookshelves.map((shelf: LocationRoom["bookshelves"][number]) => ({ ...shelf, roomName: room.name, levelName: room.levelName })));
 
   return (
     <div className="mx-auto max-w-6xl space-y-5">
       <PageHeader label="Library" title="Catalog">
-        <Button href="/books/new" size="sm">Add book</Button>
+        <Button href="/books/new" size="sm">Add book manually</Button>
       </PageHeader>
 
       <Card variant="cream">
@@ -34,9 +38,9 @@ export default async function CatalogPage({ searchParams }: { searchParams: Sear
           </label>
           <Select name="availability" label="Availability" value={input.availability} options={[{ value: "all", label: "All" }, { value: "available", label: "Available" }, { value: "loaned", label: "Loaned" }]} />
           <Select name="view" label="View" value={view} options={[{ value: "grid", label: "Grid" }, { value: "list", label: "List" }]} />
-          <Select name="levelSceneKey" label="Level" value={input.levelSceneKey} options={[{ value: "", label: "Any level" }, ...levels.map((level) => ({ value: level.sceneKey, label: level.name }))]} />
-          <Select name="roomSceneKey" label="Room" value={input.roomSceneKey} options={[{ value: "", label: "Any room" }, ...rooms.map((room) => ({ value: room.sceneKey, label: `${room.levelName} / ${room.name}` }))]} />
-          <Select name="bookshelfSceneKey" label="Bookshelf" value={input.bookshelfSceneKey} options={[{ value: "", label: "Any shelf" }, ...shelves.map((shelf) => ({ value: shelf.sceneKey, label: `${shelf.levelName} / ${shelf.roomName} / ${shelf.name}` }))]} />
+          <Select name="levelSceneKey" label="Level" value={input.levelSceneKey} options={[{ value: "", label: "Any level" }, ...levels.map((level: LocationLevel) => ({ value: level.sceneKey, label: level.name }))]} />
+          <Select name="roomSceneKey" label="Room" value={input.roomSceneKey} options={[{ value: "", label: "Any room" }, ...rooms.map((room: LocationRoom) => ({ value: room.sceneKey, label: `${room.levelName} / ${room.name}` }))]} />
+          <Select name="bookshelfSceneKey" label="Bookshelf" value={input.bookshelfSceneKey} options={[{ value: "", label: "Any shelf" }, ...shelves.map((shelf: LocationShelf) => ({ value: shelf.sceneKey, label: `${shelf.levelName} / ${shelf.roomName} / ${shelf.name}` }))]} />
           <NumberInput name="rowIndex" label="Row" value={input.rowIndex} />
           <NumberInput name="depthIndex" label="Depth" value={input.depthIndex} />
           <label className="text-sm font-semibold text-deep-brown">
@@ -55,18 +59,28 @@ export default async function CatalogPage({ searchParams }: { searchParams: Sear
       </Card>
 
       <div className="flex items-center justify-between text-sm text-muted-text">
-        <p>{results.length} {results.length === 1 ? "result" : "results"}</p>
+        <p>
+          {catalogResults.totalCount} {catalogResults.totalCount === 1 ? "result" : "results"}
+          {catalogResults.totalCount > 0 ? ` · showing ${catalogResults.shownCount}` : ""}
+        </p>
         {input.query ? <p>Ranked by ISBN, title, author, category, location, then notes.</p> : null}
       </div>
 
-      {results.length === 0 ? (
-        <EmptyState title="No matching books" message="Try a broader search or add a manual book." action={{ label: "Add a book", href: "/books/new" }} />
+      {catalogResults.totalCount === 0 ? (
+        <EmptyState title="No matching books" message="Try a broader search or add a manual book." action={{ label: "Add book manually", href: "/books/new" }} />
       ) : (
-        <div className={view === "grid" ? "grid gap-4 md:grid-cols-2 xl:grid-cols-3" : "space-y-4"}>
-          {results.map(({ book, rank }) => (
-            <BookCard key={book.id} book={book} rank={rank} view={view} />
-          ))}
-        </div>
+        <>
+          <div className={view === "grid" ? "grid gap-4 md:grid-cols-2 xl:grid-cols-3" : "space-y-4"}>
+            {catalogResults.items.map(({ book, rank }: Awaited<ReturnType<typeof searchCatalog>>["items"][number]) => (
+              <BookCard key={book.id} book={book} rank={rank} view={view} />
+            ))}
+          </div>
+          {catalogResults.hasNextPage ? (
+            <div className="flex justify-center pt-2">
+              <Button href={catalogPageHref(input, catalogResults.page + 1)} variant="outline">Load more books</Button>
+            </div>
+          ) : null}
+        </>
       )}
     </div>
   );
@@ -89,7 +103,30 @@ function parseSearchParams(params: Record<string, string | string[] | undefined>
     author: value("author") || undefined,
     category: value("category") || undefined,
     view: value("view") || "grid",
+    page: value("page") || undefined,
   });
+}
+
+function catalogPageHref(input: SearchInput, page: number) {
+  const params = new URLSearchParams();
+  const append = (key: string, value: string | number | undefined) => {
+    if (value !== undefined && value !== "") params.set(key, String(value));
+  };
+
+  append("query", input.query.trim());
+  if (input.availability !== "all") append("availability", input.availability);
+  append("levelSceneKey", input.levelSceneKey);
+  append("roomSceneKey", input.roomSceneKey);
+  append("bookshelfSceneKey", input.bookshelfSceneKey);
+  append("rowIndex", input.rowIndex);
+  append("depthIndex", input.depthIndex);
+  append("author", input.author);
+  append("category", input.category);
+  if (input.view !== "grid") append("view", input.view);
+  if (page > 1) append("page", page);
+
+  const query = params.toString();
+  return query ? `/catalog?${query}` : "/catalog";
 }
 
 function Select({ name, label, value, options }: { name: string; label: string; value?: string; options: { value: string; label: string }[] }) {
@@ -97,7 +134,7 @@ function Select({ name, label, value, options }: { name: string; label: string; 
     <label className="text-sm font-semibold text-deep-brown">
       {label}
       <select name={name} defaultValue={value ?? ""} className="mt-1 w-full rounded-2xl border border-warm-border bg-cream px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-sage">
-        {options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+        {options.map((option: { value: string; label: string }) => <option key={option.value} value={option.value}>{option.label}</option>)}
       </select>
     </label>
   );
@@ -112,8 +149,8 @@ function NumberInput({ name, label, value }: { name: string; label: string; valu
   );
 }
 
-function BookCard({ book, rank, view }: { book: Awaited<ReturnType<typeof searchCatalog>>[number]["book"]; rank: number; view: "grid" | "list" }) {
-  const availableCount = book.copies.filter((copy) => copy.status === "AVAILABLE").length;
+function BookCard({ book, rank, view }: { book: CatalogBook; rank: number; view: "grid" | "list" }) {
+  const availableCount = book.copies.filter((copy: CatalogBook["copies"][number]) => copy.status === "AVAILABLE").length;
   const locationSummary = summarizeLocations(book.copies);
 
   return (
@@ -121,8 +158,8 @@ function BookCard({ book, rank, view }: { book: Awaited<ReturnType<typeof search
       <Card variant="white" className={`h-full transition hover:-translate-y-0.5 hover:shadow-xl ${view === "list" ? "md:flex md:items-center md:justify-between md:gap-6" : ""}`}>
         <div>
           {book.coverImagePath ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={book.coverImagePath} alt={`Cover for ${book.title}`} className="mb-3 h-28 w-20 rounded-2xl object-cover shadow-md" />
+              // eslint-disable-next-line @next/next/no-img-element
+            <img src={book.coverImagePath} alt={`Cover for ${book.title}`} width={80} height={112} loading="lazy" className="mb-3 h-28 w-20 rounded-2xl object-cover shadow-md" />
           ) : (
             <div className="mb-3 flex h-24 w-20 items-center justify-center rounded-2xl bg-baby-blue/30 text-3xl">📚</div>
           )}
@@ -141,10 +178,10 @@ function BookCard({ book, rank, view }: { book: Awaited<ReturnType<typeof search
   );
 }
 
-type CatalogBook = Awaited<ReturnType<typeof searchCatalog>>[number]["book"];
+type CatalogBook = Awaited<ReturnType<typeof searchCatalog>>["items"][number]["book"];
 
 function summarizeLocations(copies: CatalogBook["copies"]) {
   if (copies.length === 0) return "No copies assigned";
-  const names = Array.from(new Set(copies.map((copy) => `${copy.locationSlot.bookshelf.room.name} / ${copy.locationSlot.bookshelf.name}`)));
+  const names = Array.from(new Set(copies.map((copy: CatalogBook["copies"][number]) => copy.locationSlot ? `${copy.locationSlot.bookshelf.room.name} / ${copy.locationSlot.bookshelf.name}` : "Unshelved")));
   return names.length <= 2 ? names.join(", ") : `${names.slice(0, 2).join(", ")} +${names.length - 2} more`;
 }

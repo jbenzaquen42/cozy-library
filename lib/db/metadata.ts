@@ -6,6 +6,7 @@ import { mergeMetadataIntoBook } from "../metadata/merge";
 import { lookupGoogleBooks, lookupHardcover, lookupIsbnDb, lookupOpenLibrary } from "../metadata/providers";
 import type { MetadataLookupInput, MetadataLookupResult, MetadataProvider } from "../metadata/types";
 import { prisma as defaultPrisma } from "./prisma";
+import { upsertDisplayAuthor } from "./books";
 
 function lookupKey(input: MetadataLookupInput) {
   return input.isbn?.replace(/[-\s]/g, "") || [input.title, input.author].filter(Boolean).join("|").toLowerCase();
@@ -54,24 +55,36 @@ export async function refreshBookMetadata(bookId: string, db: PrismaClient = def
   const merged = mergeMetadataIntoBook(book, results);
   const coverResult = results.find((result) => result.coverUrl);
   const cover = await cacheCoverImage(book.id, coverResult?.coverUrl);
+  const p = merged.patch;
+
   const updateData: Prisma.BookUpdateInput = {
-    ...(merged.patch as Prisma.BookUpdateInput),
+    ...(p.title !== undefined ? { title: p.title } : {}),
+    ...(p.subtitle !== undefined ? { subtitle: p.subtitle } : {}),
+    ...(p.displayAuthor !== undefined ? { displayAuthor: p.displayAuthor } : {}),
+    ...(p.isbn10 !== undefined ? { isbn10: p.isbn10 } : {}),
+    ...(p.isbn13 !== undefined ? { isbn13: p.isbn13 } : {}),
+    ...(p.publisher !== undefined ? { publisher: p.publisher } : {}),
+    ...(p.publishedDate !== undefined ? { publishedDate: p.publishedDate } : {}),
+    ...(p.pageCount !== undefined ? { pageCount: p.pageCount as number | null } : {}),
+    ...(p.language !== undefined ? { language: p.language } : {}),
+    ...(p.description !== undefined ? { description: p.description } : {}),
+    ...(p.seriesName !== undefined ? { seriesName: p.seriesName } : {}),
+    ...(p.seriesNumber !== undefined ? { seriesNumber: p.seriesNumber } : {}),
+    ...(p.categories !== undefined ? { categories: p.categories as Prisma.InputJsonValue } : {}),
     metadataSource: merged.metadataSource,
     metadataJson: JSON.parse(JSON.stringify(merged.metadataJson)) as Prisma.InputJsonValue,
     coverImagePath: cover?.publicPath ?? book.coverImagePath,
-    ...(cover
-      ? {
-          images: {
-            create: { kind: "CACHED_COVER", filePath: cover.filePath, mimeType: cover.mimeType, sourceUrl: cover.sourceUrl },
-          },
-        }
-      : {}),
+    ...(cover ? { images: { create: { kind: "CACHED_COVER", filePath: cover.filePath, mimeType: cover.mimeType, sourceUrl: cover.sourceUrl } } } : {}),
   };
 
   const updated = await db.book.update({
     where: { id: book.id },
     data: updateData,
   });
+
+  if (p.displayAuthor !== undefined) {
+    await upsertDisplayAuthor(book.id, p.displayAuthor, db as unknown as Prisma.TransactionClient);
+  }
 
   return { book: updated, results, coverPath: cover?.publicPath };
 }

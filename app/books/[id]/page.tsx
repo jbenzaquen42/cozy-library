@@ -3,23 +3,35 @@ import { notFound } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { FlashBanner } from "@/components/ui/flash-banner";
 import { PageHeader } from "@/components/ui/page-header";
+import { SubmitButton } from "@/components/ui/submit-button";
 import { getBook } from "@/lib/db/books";
 import { listLocations } from "@/lib/db/locations";
 import { addCopyAction, deleteCopyAction, moveCopyAction, refreshMetadataAction, renameCopyAction } from "../actions";
+import { formatDate } from "@/lib/utils";
 import { loanCopyAction, returnLoanAction } from "@/app/loans/actions";
 
 export const dynamic = "force-dynamic";
 
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{ error?: string; saved?: string }>;
+type BookDetail = Awaited<ReturnType<typeof getBook>>;
+type BookCopy = BookDetail["copies"][number];
+type LocationLevels = Awaited<ReturnType<typeof listLocations>>;
+type LocationLevel = LocationLevels[number];
+type LocationRoom = LocationLevel["rooms"][number];
+type LocationShelf = LocationRoom["bookshelves"][number];
+type LocationSlot = LocationShelf["slots"][number];
+type SlotOption = { id: string; label: string };
 
 export default async function BookDetailPage({ params, searchParams }: { params: Params; searchParams: SearchParams }) {
   const { id } = await params;
-  const { error, saved } = await searchParams;
+  await searchParams;
   const [bookResult, levels] = await Promise.all([getBook(id).catch(() => null), listLocations({ includeSlots: true })]);
   if (!bookResult) notFound();
-  const book = bookResult;
+  const book: BookDetail = bookResult;
+  const categories: string[] = Array.isArray(book.categories) ? book.categories.filter((category: unknown): category is string => typeof category === "string") : [];
 
   return (
     <div className="mx-auto max-w-5xl space-y-6">
@@ -27,19 +39,18 @@ export default async function BookDetailPage({ params, searchParams }: { params:
         <div className="flex flex-wrap gap-2">
           <form action={refreshMetadataAction}>
             <input type="hidden" name="bookId" value={book.id} />
-            <Button type="submit" variant="secondary" size="sm">Refresh metadata</Button>
+            <SubmitButton variant="secondary" size="sm" pendingLabel="Refreshing…">Refresh metadata</SubmitButton>
           </form>
           <Button href={`/books/${book.id}/edit`} variant="outline" size="sm">Edit book</Button>
         </div>
       </PageHeader>
-      {error ? <div className="rounded-2xl border border-soft-red/30 bg-soft-red/10 p-4 text-sm font-semibold text-deep-brown">{error}</div> : null}
-      {saved ? <div className="rounded-2xl border border-sage/30 bg-sage/10 p-4 text-sm font-semibold text-deep-brown">Saved.</div> : null}
+      <FlashBanner successMessage="Saved." />
 
       <Card variant="cream">
         <div className="flex flex-col gap-4 md:flex-row">
           {book.coverImagePath ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={book.coverImagePath} alt={`Cover for ${book.title}`} className="h-48 w-32 rounded-2xl object-cover shadow-lg" />
+              // eslint-disable-next-line @next/next/no-img-element
+            <img src={book.coverImagePath} alt={`Cover for ${book.title}`} width={128} height={192} loading="lazy" className="h-48 w-32 rounded-2xl object-cover shadow-lg" />
           ) : (
             <div className="flex h-48 w-32 items-center justify-center rounded-2xl bg-baby-blue/30 text-4xl">📚</div>
           )}
@@ -55,9 +66,9 @@ export default async function BookDetailPage({ params, searchParams }: { params:
           {book.language ? <Badge>{book.language}</Badge> : null}
           {book.metadataSource ? <Badge variant="brown">Sources: {book.metadataSource}</Badge> : null}
         </div>
-        {Array.isArray(book.categories) && book.categories.length > 0 ? (
+        {categories.length > 0 ? (
           <div className="mt-3 flex flex-wrap gap-2">
-            {book.categories.filter((category): category is string => typeof category === "string").map((category) => <Badge key={category} variant="blue">{category}</Badge>)}
+            {categories.map((category) => <Badge key={category} variant="blue">{category}</Badge>)}
           </div>
         ) : null}
         {book.description ? <p className="mt-4 whitespace-pre-wrap text-soft-brown">{book.description}</p> : null}
@@ -67,7 +78,7 @@ export default async function BookDetailPage({ params, searchParams }: { params:
 
       <Card variant="white" title="Copies">
         <div className="mt-4 space-y-4">
-          {book.copies.map((copy) => (
+          {book.copies.map((copy: BookCopy) => (
             <div key={copy.id} className="rounded-2xl border border-warm-border bg-cream/70 p-4">
               <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                 <div>
@@ -77,9 +88,9 @@ export default async function BookDetailPage({ params, searchParams }: { params:
                   {copy.loans.length > 0 ? (
                     <div className="mt-2 text-xs text-muted-text">
                       <p className="font-semibold text-deep-brown">Loan history</p>
-                      {copy.loans.map((loan) => (
+                      {copy.loans.map((loan: BookCopy["loans"][number]) => (
                         <p key={loan.id}>
-                          {loan.borrowerName}: {loan.dateLoaned.toLocaleDateString()} {loan.dateReturned ? `→ ${loan.dateReturned.toLocaleDateString()}` : "(active)"}
+                          {loan.borrowerName}:                           {formatDate(loan.dateLoaned)} {loan.dateReturned ? `→ ${formatDate(loan.dateReturned)}` : "(active)"}
                         </p>
                       ))}
                     </div>
@@ -92,13 +103,13 @@ export default async function BookDetailPage({ params, searchParams }: { params:
                   <input type="hidden" name="bookId" value={book.id} />
                   <input type="hidden" name="id" value={copy.id} />
                   <input name="copyLabel" defaultValue={copy.copyLabel} className="w-full rounded-2xl border border-warm-border bg-cream px-3 py-2 text-sm" />
-                  <Button type="submit" size="sm">Rename</Button>
+                  <SubmitButton size="sm" pendingLabel="Renaming…">Rename</SubmitButton>
                 </form>
                 <form action={moveCopyAction} className="flex gap-2">
                   <input type="hidden" name="bookId" value={book.id} />
                   <input type="hidden" name="id" value={copy.id} />
                   <SlotSelect levels={levels} defaultValue={copy.locationSlotId} />
-                  <Button type="submit" size="sm">Move</Button>
+                  <SubmitButton size="sm" pendingLabel="Moving…">Move copy</SubmitButton>
                 </form>
               </div>
             </div>
@@ -106,13 +117,13 @@ export default async function BookDetailPage({ params, searchParams }: { params:
         </div>
       </Card>
 
-      <Card variant="blue" title="Add another copy">
+      <Card variant="blue" title="Add copy">
         <form action={addCopyAction} className="mt-4 grid gap-3 md:grid-cols-3">
           <input type="hidden" name="bookId" value={book.id} />
           <SlotSelect levels={levels} />
           <input name="condition" placeholder="Condition" className="rounded-2xl border border-warm-border bg-cream px-3 py-2 text-sm" />
           <input name="notes" placeholder="Copy notes" className="rounded-2xl border border-warm-border bg-cream px-3 py-2 text-sm" />
-          <div><Button type="submit" size="sm">Add copy</Button></div>
+          <div><SubmitButton size="sm" pendingLabel="Adding…">Add copy</SubmitButton></div>
         </form>
       </Card>
 
@@ -121,8 +132,8 @@ export default async function BookDetailPage({ params, searchParams }: { params:
   );
 }
 
-function CopyActions({ bookId, copy }: { bookId: string; copy: Awaited<ReturnType<typeof getBook>>["copies"][number] }) {
-  const activeLoan = copy.loans.find((loan) => !loan.dateReturned);
+function CopyActions({ bookId, copy }: { bookId: string; copy: BookCopy }) {
+  const activeLoan = copy.loans.find((loan: BookCopy["loans"][number]) => !loan.dateReturned);
 
   if (activeLoan) {
     return (
@@ -130,7 +141,7 @@ function CopyActions({ bookId, copy }: { bookId: string; copy: Awaited<ReturnTyp
         <input type="hidden" name="loanId" value={activeLoan.id} />
         <input type="hidden" name="bookId" value={bookId} />
         <input type="hidden" name="returnTo" value={`/books/${bookId}`} />
-        <Button type="submit" size="sm">Return copy</Button>
+        <SubmitButton size="sm" pendingLabel="Returning…" confirmMessage="Mark this loan as returned?">Return copy</SubmitButton>
       </form>
     );
   }
@@ -143,26 +154,36 @@ function CopyActions({ bookId, copy }: { bookId: string; copy: Awaited<ReturnTyp
         <input type="hidden" name="returnTo" value={`/books/${bookId}`} />
         <input name="borrowerName" required placeholder="Borrower name" className="rounded-2xl border border-warm-border bg-cream px-3 py-2 text-sm" />
         <input name="notes" placeholder="Notes" className="rounded-2xl border border-warm-border bg-cream px-3 py-2 text-sm" />
-        <Button type="submit" size="sm">Loan</Button>
+        <SubmitButton size="sm" pendingLabel="Loaning…">Loan</SubmitButton>
       </form>
-      <form action={deleteCopyAction}>
-        <input type="hidden" name="bookId" value={bookId} />
-        <input type="hidden" name="id" value={copy.id} />
-        <Button type="submit" variant="secondary" size="sm">Delete copy</Button>
-      </form>
+      <div className="border-t border-warm-border pt-3">
+        <form action={deleteCopyAction}>
+          <input type="hidden" name="bookId" value={bookId} />
+          <input type="hidden" name="id" value={copy.id} />
+          <SubmitButton
+            variant="danger"
+            size="sm"
+            pendingLabel="Deleting…"
+            confirmMessage="Delete this copy? This cannot be undone."
+          >
+            Delete copy
+          </SubmitButton>
+        </form>
+      </div>
     </div>
   );
 }
 
 function formatLocation(slot: Awaited<ReturnType<typeof getBook>>["copies"][number]["locationSlot"]) {
+  if (!slot) return "Unshelved queue";
   return `${slot.bookshelf.room.level.name} / ${slot.bookshelf.room.name} / ${slot.bookshelf.name} / Row ${slot.rowIndex} / ${slot.depthIndex === 1 ? "Front" : `Depth ${slot.depthIndex}`}`;
 }
 
-function SlotSelect({ levels, defaultValue }: { levels: Awaited<ReturnType<typeof listLocations>>; defaultValue?: string }) {
-  const options = levels.flatMap((level) =>
-    level.rooms.flatMap((room) =>
-      room.bookshelves.flatMap((shelf) =>
-        shelf.slots.map((slot) => ({
+function SlotSelect({ levels, defaultValue }: { levels: LocationLevels; defaultValue?: string | null }) {
+  const options: SlotOption[] = levels.flatMap((level: LocationLevel) =>
+    level.rooms.flatMap((room: LocationRoom) =>
+      room.bookshelves.flatMap((shelf: LocationShelf) =>
+        shelf.slots.map((slot: LocationSlot) => ({
           id: slot.id,
           label: `${level.name} / ${room.name} / ${shelf.name} / Row ${slot.rowIndex} / ${slot.depthIndex === 1 ? "Front" : `Depth ${slot.depthIndex}`}`,
         })),
@@ -171,8 +192,9 @@ function SlotSelect({ levels, defaultValue }: { levels: Awaited<ReturnType<typeo
   );
 
   return (
-    <select name="locationSlotId" defaultValue={defaultValue} required className="w-full rounded-2xl border border-warm-border bg-cream px-3 py-2 text-sm">
-      {options.map((option) => (
+    <select name="locationSlotId" defaultValue={defaultValue ?? ""} className="w-full rounded-2xl border border-warm-border bg-cream px-3 py-2 text-sm">
+      <option value="">Unshelved queue</option>
+      {options.map((option: SlotOption) => (
         <option key={option.id} value={option.id}>{option.label}</option>
       ))}
     </select>

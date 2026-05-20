@@ -31,11 +31,9 @@ export async function getSettingsStatus(db: PrismaClient = defaultPrisma) {
     database,
     paths: {
       dataDir: process.env.APP_DATA_DIR ?? "/data",
-      blenderModelPath: process.env.BLENDER_MODEL_PATH ?? "/models/home-library.glb",
     },
     features: {
       ocrEnabled: process.env.ENABLE_OCR !== "false",
-      threeDEnabled: process.env.ENABLE_3D !== "false",
     },
     providers: {
       googleBooksConfigured: Boolean(process.env.GOOGLE_BOOKS_API_KEY),

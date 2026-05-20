@@ -16,7 +16,7 @@ function authorSortName(name: string) {
   return `${last}, ${rest}`;
 }
 
-async function upsertDisplayAuthor(bookId: string, displayAuthor: string, tx: Prisma.TransactionClient) {
+export async function upsertDisplayAuthor(bookId: string, displayAuthor: string, tx: Prisma.TransactionClient) {
   await tx.bookAuthor.deleteMany({ where: { bookId } });
   const names = displayAuthor
     .split(/\s+(?:and|&)\s+|,/) 
@@ -79,8 +79,10 @@ export async function getBook(id: string, db: PrismaClient = defaultPrisma) {
 
 export async function createManualBook(input: CreateManualBookInput, db: PrismaClient = defaultPrisma) {
   return db.$transaction(async (tx) => {
-    const slot = await tx.shelfSlot.findUnique({ where: { id: input.locationSlotId } });
-    if (!slot) throw new AppError("NOT_FOUND", "Shelf slot not found", "locationSlotId");
+    if (input.locationSlotId) {
+      const slot = await tx.shelfSlot.findUnique({ where: { id: input.locationSlotId } });
+      if (!slot) throw new AppError("NOT_FOUND", "Shelf slot not found", "locationSlotId");
+    }
 
     const book = await tx.book.create({ data: bookData(input) });
     await upsertDisplayAuthor(book.id, input.displayAuthor, tx);
@@ -88,7 +90,7 @@ export async function createManualBook(input: CreateManualBookInput, db: PrismaC
       data: {
         bookId: book.id,
         copyLabel: "1",
-        locationSlotId: input.locationSlotId,
+        locationSlotId: input.locationSlotId ?? null,
         condition: normalizeOptional(input.condition),
         notes: normalizeOptional(input.notes),
       },
@@ -110,5 +112,9 @@ export async function updateBook(input: UpdateBookInput, db: PrismaClient = defa
 export async function deleteBookIfNoCopies(id: string, db: PrismaClient = defaultPrisma) {
   const copyCount = await db.copy.count({ where: { bookId: id } });
   if (copyCount > 0) throw new AppError("CONFLICT", "Delete copies before deleting this book.");
-  return db.book.delete({ where: { id } });
+  return db.$transaction(async (tx) => {
+    const deleted = await tx.book.delete({ where: { id } });
+    await tx.author.deleteMany({ where: { books: { none: {} } } });
+    return deleted;
+  });
 }

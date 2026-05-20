@@ -1,6 +1,8 @@
 import type { MetadataLookupInput, MetadataLookupResult } from "./types";
 import { readFile } from "node:fs/promises";
 
+const DEFAULT_CONTACT_EMAIL = "local-use@cozy-library.invalid";
+
 function clean(value: unknown) {
   return typeof value === "string" && value.trim() ? value.trim() : undefined;
 }
@@ -18,7 +20,7 @@ export async function lookupOpenLibrary(input: MetadataLookupInput): Promise<Met
   if (!isbn) return null;
 
   const response = await fetch(`https://openlibrary.org/isbn/${encodeURIComponent(isbn)}.json`, {
-    headers: { "User-Agent": `CozyHomeLibrary (${process.env.APP_CONTACT_EMAIL ?? "replace-me@example.com"})` },
+    headers: { "User-Agent": `CozyHomeLibrary (${process.env.APP_CONTACT_EMAIL ?? DEFAULT_CONTACT_EMAIL})` },
   });
   if (!response.ok) return null;
   const raw = (await response.json()) as Record<string, unknown>;
@@ -182,7 +184,7 @@ export async function lookupHardcover(input: MetadataLookupInput): Promise<Metad
     headers: {
       "Content-Type": "application/json",
       authorization: `Bearer ${token}`,
-      "User-Agent": `CozyHomeLibrary (${process.env.APP_CONTACT_EMAIL ?? "replace-me@example.com"})`,
+      "User-Agent": `CozyHomeLibrary (${process.env.APP_CONTACT_EMAIL ?? DEFAULT_CONTACT_EMAIL})`,
     },
     body: JSON.stringify({ query: HARDCOVER_ISBN_QUERY, variables: { isbn10: isbn, isbn13: isbn } }),
   });

@@ -74,21 +74,21 @@ export const DEFAULT_HOUSE_LAYOUT: LevelSeed[] = [
           {
             name: "Hallway Bookcase 1",
             sceneKey: DEFAULT_SCENE_KEYS.shelves.upstairsHallwayBookcase1,
-            rowCount: 4,
+            rowCount: 3,
             depthCount: 2,
             sortOrder: 1,
           },
           {
             name: "Hallway Bookcase 2",
             sceneKey: DEFAULT_SCENE_KEYS.shelves.upstairsHallwayBookcase2,
-            rowCount: 4,
+            rowCount: 3,
             depthCount: 2,
             sortOrder: 2,
           },
           {
             name: "Hallway Bookcase 3",
             sceneKey: DEFAULT_SCENE_KEYS.shelves.upstairsHallwayBookcase3,
-            rowCount: 4,
+            rowCount: 3,
             depthCount: 2,
             sortOrder: 3,
           },
@@ -102,7 +102,7 @@ export const DEFAULT_HOUSE_LAYOUT: LevelSeed[] = [
           {
             name: "Study Shelf",
             sceneKey: DEFAULT_SCENE_KEYS.shelves.upstairsStudyShelf,
-            rowCount: 5,
+            rowCount: 4,
             depthCount: 2,
             sortOrder: 1,
           },
@@ -153,4 +153,12 @@ export function getDefaultShelfSlotCount() {
       ),
     0,
   );
+}
+
+export function getDefaultLivingRoomShelfSceneKeys() {
+  return DEFAULT_HOUSE_LAYOUT.flatMap((level) => level.rooms.flatMap((room) => room.shelves.map((shelf) => shelf.sceneKey)));
+}
+
+export function getDefaultActiveLivingRoomShelfSceneKey() {
+  return DEFAULT_SCENE_KEYS.shelves.downstairsEntryShelf;
 }

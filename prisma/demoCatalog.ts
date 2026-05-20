@@ -67,6 +67,8 @@ const DEMO_BOOKS: DemoBook[] = [
   { title: "Tomorrow, and Tomorrow, and Tomorrow", author: "Gabrielle Zevin", isbn13: "9780593321201", publishedDate: "2022", publisher: "Knopf", pageCount: 416, categories: ["Fiction"] },
 ];
 
+const DEMO_ISBNS = DEMO_BOOKS.map((book) => book.isbn13);
+
 function authorSortName(name: string) {
   const firstAuthor = name.split(/\s+(?:and|&)\s+|,/)[0]?.trim() ?? name;
   const parts = firstAuthor.split(/\s+/);
@@ -133,7 +135,7 @@ async function enrichDemoBook(bookId: string, item: DemoBook) {
 }
 
 async function clearDemoCatalog() {
-  const demoBooks = await prisma.book.findMany({ where: { metadataSource: DEMO_SOURCE }, select: { id: true } });
+  const demoBooks = await prisma.book.findMany({ where: { OR: [{ metadataSource: DEMO_SOURCE }, { isbn13: { in: DEMO_ISBNS } }] }, select: { id: true } });
   const bookIds = demoBooks.map((book) => book.id);
 
   if (bookIds.length === 0) {
@@ -221,6 +223,15 @@ async function seedDemoCatalog() {
   console.log(`Seeded ${DEMO_BOOKS.length} removable demo catalog books. Remove with npm run demo:clear.`);
 }
 
+async function ensureDemoCatalog() {
+  const existing = await prisma.book.count({ where: { OR: [{ metadataSource: DEMO_SOURCE }, { isbn13: { in: DEMO_ISBNS } }] } });
+  if (existing > 0) {
+    console.log(`Demo catalog already present (${existing} books). Skipping demo seed.`);
+    return;
+  }
+  await seedDemoCatalog();
+}
+
 async function enrichExistingDemoCatalog() {
   let enriched = 0;
   for (const item of DEMO_BOOKS) {
@@ -236,8 +247,9 @@ async function main() {
   const command = process.argv[2] ?? "seed";
   if (command === "clear") return clearDemoCatalog();
   if (command === "enrich") return enrichExistingDemoCatalog();
+  if (command === "ensure") return ensureDemoCatalog();
   if (command === "seed") return seedDemoCatalog();
-  throw new Error(`Unknown demo catalog command: ${command}. Use seed, enrich, or clear.`);
+  throw new Error(`Unknown demo catalog command: ${command}. Use seed, ensure, enrich, or clear.`);
 }
 
 main()

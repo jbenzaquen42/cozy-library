@@ -3,13 +3,12 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { MapPin, Users, ArrowLeftRight, Settings, X } from "lucide-react";
+import { MapPin, Users, Settings, X } from "lucide-react";
 
 const menuItems = [
   { href: "/locations", label: "Locations", icon: MapPin },
   { href: "/loans", label: "Loans", icon: Users },
-  { href: "/import-export", label: "Import/Export", icon: ArrowLeftRight },
-  { href: "/settings", label: "Settings", icon: Settings },
+  { href: "/settings", label: "Status", icon: Settings },
 ];
 
 export function MobileMenu({
@@ -47,6 +46,7 @@ export function MobileMenu({
               <li key={item.href}>
                 <Link
                   href={item.href}
+                  aria-current={isActive ? "page" : undefined}
                   onClick={onClose}
                   className={cn(
                     "flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold transition-colors",

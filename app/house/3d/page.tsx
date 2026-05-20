@@ -1,6 +1,6 @@
 import { PageHeader } from "@/components/ui/page-header";
 import { Card } from "@/components/ui/card";
-import { GeneratedHouseScene } from "@/components/house/GeneratedHouseScene";
+import { LivingRoomBookshelfBrowser } from "@/components/house/LivingRoomBookshelfBrowser";
 import { getHouseBrowserData } from "@/lib/db/houseBrowser";
 
 export const dynamic = "force-dynamic";
@@ -10,13 +10,13 @@ export default async function House3DPage() {
 
   return (
     <div className="mx-auto max-w-7xl space-y-6">
-      <PageHeader label="Browse" title="3D House" />
-      <Card variant="blue" title="Generated house browser">
+      <PageHeader label="Browse" title="Living room shelf view" />
+      <Card variant="blue" title="Straight-on bookshelf browser">
         <p className="text-muted-text">
-          Browse a generated low-poly house, click shelves by their database scene keys, and review the selected shelf slots. A future Blender file can replace this generated scene without changing shelf identifiers.
+          The coffee table has been removed from the main room composition. Use the arrows or the right-side overlay to bring each real bookshelf into the active position.
         </p>
       </Card>
-      <GeneratedHouseScene levels={levels} />
+      <LivingRoomBookshelfBrowser levels={levels} />
     </div>
   );
 }

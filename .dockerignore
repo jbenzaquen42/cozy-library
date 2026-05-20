@@ -8,4 +8,5 @@ coverage
 playwright-report
 test-results
 npm-debug.log*
-cozy_home_library_blender_docs_v3
+internal-docs
+.data

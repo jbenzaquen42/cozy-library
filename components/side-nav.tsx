@@ -10,7 +10,6 @@ import {
   House,
   MapPin,
   Users,
-  ArrowLeftRight,
   Settings,
 } from "lucide-react";
 
@@ -21,8 +20,7 @@ const navItems = [
   { href: "/house", label: "House", icon: House },
   { href: "/locations", label: "Locations", icon: MapPin },
   { href: "/loans", label: "Loans", icon: Users },
-  { href: "/import-export", label: "Import/Export", icon: ArrowLeftRight },
-  { href: "/settings", label: "Settings", icon: Settings },
+  { href: "/settings", label: "Status", icon: Settings },
 ];
 
 export function SideNav() {
@@ -31,9 +29,9 @@ export function SideNav() {
   return (
     <nav className="sticky top-0 flex h-screen w-64 flex-col border-r border-warm-border bg-cream p-6">
       <div className="mb-8">
-        <h1 className="font-heading text-2xl font-bold text-deep-brown">
+        <span className="block font-heading text-2xl font-bold text-deep-brown">
           Cozy Library
-        </h1>
+        </span>
         <p className="mt-1 text-xs text-muted-text">Home bookshelf locator</p>
       </div>
       <ul className="space-y-1">
@@ -44,6 +42,7 @@ export function SideNav() {
             <li key={item.href}>
               <Link
                 href={item.href}
+                aria-current={isActive ? "page" : undefined}
                 className={cn(
                   "flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold transition-colors",
                   isActive

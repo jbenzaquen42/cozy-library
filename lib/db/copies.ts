@@ -23,20 +23,30 @@ export async function createCopy(input: CopyInput, db: PrismaClient = defaultPri
   const book = await db.book.findUnique({ where: { id: input.bookId }, include: { copies: { select: { copyLabel: true } } } });
   if (!book) throw new AppError("NOT_FOUND", "Book not found", "bookId");
 
-  const slot = await db.shelfSlot.findUnique({ where: { id: input.locationSlotId } });
-  if (!slot) throw new AppError("NOT_FOUND", "Shelf slot not found", "locationSlotId");
+  if (input.locationSlotId) {
+    const slot = await db.shelfSlot.findUnique({ where: { id: input.locationSlotId } });
+    if (!slot) throw new AppError("NOT_FOUND", "Shelf slot not found", "locationSlotId");
+  }
 
   const copy = await db.copy.create({
     data: {
       bookId: input.bookId,
       copyLabel: getNextCopyLabel(book.copies.map((item) => item.copyLabel)),
-      locationSlotId: input.locationSlotId,
+      locationSlotId: input.locationSlotId ?? null,
       condition: input.condition ?? null,
       notes: input.notes ?? null,
     },
   });
 
   return copy;
+}
+
+export async function listUnshelvedCopies(db: PrismaClient = defaultPrisma) {
+  return db.copy.findMany({
+    where: { locationSlotId: null },
+    orderBy: [{ createdAt: "desc" }, { copyLabel: "asc" }],
+    include: { book: { select: { id: true, title: true, displayAuthor: true, isbn10: true, isbn13: true } } },
+  });
 }
 
 export async function renameCopy(input: RenameCopyInput, db: PrismaClient = defaultPrisma) {
@@ -52,9 +62,11 @@ export async function renameCopy(input: RenameCopyInput, db: PrismaClient = defa
 }
 
 export async function moveCopy(input: MoveCopyInput, db: PrismaClient = defaultPrisma) {
-  const slot = await db.shelfSlot.findUnique({ where: { id: input.locationSlotId } });
-  if (!slot) throw new AppError("NOT_FOUND", "Shelf slot not found", "locationSlotId");
-  return db.copy.update({ where: { id: input.id }, data: { locationSlotId: input.locationSlotId } });
+  if (input.locationSlotId) {
+    const slot = await db.shelfSlot.findUnique({ where: { id: input.locationSlotId } });
+    if (!slot) throw new AppError("NOT_FOUND", "Shelf slot not found", "locationSlotId");
+  }
+  return db.copy.update({ where: { id: input.id }, data: { locationSlotId: input.locationSlotId ?? null } });
 }
 
 export async function deleteCopy(id: string, db: PrismaClient = defaultPrisma) {

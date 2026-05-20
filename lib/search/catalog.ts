@@ -1,7 +1,7 @@
 import type { PrismaClient } from "@prisma/client";
 import { getBookInclude } from "../db/books";
 import { prisma as defaultPrisma } from "../db/prisma";
-import type { SearchInput } from "../validation/search";
+import { CATALOG_PAGE_SIZE, type SearchInput } from "../validation/search";
 
 type SearchableBook = {
   title: string;
@@ -24,8 +24,22 @@ type SearchableBook = {
           level: { name: string; sceneKey: string };
         };
       };
-    };
+    } | null;
   }[];
+};
+
+type CatalogSearchItem<TBook> = {
+  book: TBook;
+  rank: number;
+};
+
+export type CatalogSearchResults<TBook> = {
+  items: CatalogSearchItem<TBook>[];
+  totalCount: number;
+  shownCount: number;
+  page: number;
+  pageSize: number;
+  hasNextPage: boolean;
 };
 
 function text(value: string | null | undefined) {
@@ -98,12 +112,29 @@ export function matchesCatalogFilters(book: SearchableBook, input: SearchInput) 
   });
 }
 
+export function paginateCatalogItems<TBook>(items: CatalogSearchItem<TBook>[], page: number, pageSize = CATALOG_PAGE_SIZE): CatalogSearchResults<TBook> {
+  const normalizedPage = Math.max(1, Math.floor(page));
+  const normalizedPageSize = Math.max(1, Math.floor(pageSize));
+  const shownCount = Math.min(items.length, normalizedPage * normalizedPageSize);
+
+  return {
+    items: items.slice(0, shownCount),
+    totalCount: items.length,
+    shownCount,
+    page: normalizedPage,
+    pageSize: normalizedPageSize,
+    hasNextPage: shownCount < items.length,
+  };
+}
+
 export async function searchCatalog(input: SearchInput, db: PrismaClient = defaultPrisma) {
   const books = await db.book.findMany({ include: getBookInclude(), orderBy: [{ updatedAt: "desc" }, { title: "asc" }] });
   const query = input.query.trim();
 
-  return books
+  const rankedBooks = books
     .map((book) => ({ book, rank: rankCatalogBook(book, query) }))
     .filter(({ book, rank }) => (query ? Number.isFinite(rank) : true) && matchesCatalogFilters(book, input))
     .sort((left, right) => left.rank - right.rank || left.book.title.localeCompare(right.book.title));
+
+  return paginateCatalogItems(rankedBooks, input.page);
 }

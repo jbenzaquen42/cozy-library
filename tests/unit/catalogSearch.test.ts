@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { matchesCatalogFilters, rankCatalogBook } from "../../lib/search/catalog";
+import { matchesCatalogFilters, paginateCatalogItems, rankCatalogBook } from "../../lib/search/catalog";
 
 const book = {
   title: "The Hobbit",
@@ -44,8 +44,8 @@ describe("catalog search ranking", () => {
   });
 
   it("matches availability and exact location filters", () => {
-    expect(matchesCatalogFilters(book, { query: "", availability: "available", view: "grid" })).toBe(true);
-    expect(matchesCatalogFilters(book, { query: "", availability: "loaned", view: "grid" })).toBe(false);
+    expect(matchesCatalogFilters(book, { query: "", availability: "available", view: "grid", page: 1 })).toBe(true);
+    expect(matchesCatalogFilters(book, { query: "", availability: "loaned", view: "grid", page: 1 })).toBe(false);
     expect(
       matchesCatalogFilters(book, {
         query: "",
@@ -56,7 +56,23 @@ describe("catalog search ranking", () => {
         rowIndex: 2,
         depthIndex: 1,
         view: "grid",
+        page: 1,
       }),
     ).toBe(true);
+  });
+
+  it("uses a load-more slice before rendering large result sets", () => {
+    const results = Array.from({ length: 55 }, (_, index) => ({ book: { id: String(index), title: `Book ${index}` }, rank: index }));
+
+    const firstPage = paginateCatalogItems(results, 1, 24);
+    expect(firstPage.items).toHaveLength(24);
+    expect(firstPage.totalCount).toBe(55);
+    expect(firstPage.shownCount).toBe(24);
+    expect(firstPage.hasNextPage).toBe(true);
+
+    const thirdPage = paginateCatalogItems(results, 3, 24);
+    expect(thirdPage.items).toHaveLength(55);
+    expect(thirdPage.shownCount).toBe(55);
+    expect(thirdPage.hasNextPage).toBe(false);
   });
 });

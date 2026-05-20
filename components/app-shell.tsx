@@ -14,7 +14,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <SideNav />
       </aside>
 
-      <main className="flex-1 px-4 py-6 pb-24 sm:px-6 md:px-8 md:pb-8">
+      <main id="main-content" className="flex-1 px-4 py-6 pb-24 sm:px-6 md:px-8 md:pb-8">
         {children}
       </main>
 

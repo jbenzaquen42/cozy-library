@@ -1,8 +1,8 @@
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { ErrorMessage } from "@/components/ui/error-message";
+import { FlashBanner } from "@/components/ui/flash-banner";
 import { PageHeader } from "@/components/ui/page-header";
+import { SubmitButton } from "@/components/ui/submit-button";
 import { getLocationSummary, listLocations } from "@/lib/db/locations";
 import {
   createBookshelfAction,
@@ -22,14 +22,20 @@ import {
 export const dynamic = "force-dynamic";
 
 type SearchParams = Promise<{ error?: string; saved?: string }>;
+type LocationLevels = Awaited<ReturnType<typeof listLocations>>;
+type LocationLevel = LocationLevels[number];
+type LocationRoom = LocationLevel["rooms"][number];
+type LocationShelf = LocationRoom["bookshelves"][number];
+type RoomWithLevel = LocationRoom & { levelName: string };
+type SelectOption = { value: string; label: string };
 
 export default async function LocationsPage({ searchParams }: { searchParams: SearchParams }) {
-  const [{ error, saved }, levels, summary] = await Promise.all([
+  const [, levels, summary] = await Promise.all([
     searchParams,
     listLocations({ includeSlots: true }),
     getLocationSummary(),
   ]);
-  const rooms = levels.flatMap((level) => level.rooms.map((room) => ({ ...room, levelName: level.name })));
+  const rooms: RoomWithLevel[] = levels.flatMap((level: LocationLevel) => level.rooms.map((room: LocationRoom) => ({ ...room, levelName: level.name })));
 
   return (
     <div className="mx-auto max-w-6xl space-y-8">
@@ -38,8 +44,7 @@ export default async function LocationsPage({ searchParams }: { searchParams: Se
         Edit levels, rooms, bookshelves, shelf row/depth counts, and display order. Shrinking or deleting occupied shelf slots is blocked so book locations are not lost.
       </p>
 
-      {error ? <ErrorMessage error={new Error(error)} /> : null}
-      {saved ? <div className="rounded-2xl border border-sage/30 bg-sage/10 p-4 text-sm font-semibold text-deep-brown">Location changes saved.</div> : null}
+      <FlashBanner successMessage="Location changes saved." />
 
       <dl className="grid gap-3 sm:grid-cols-4">
         <Summary label="Levels" value={summary.levelCount} />
@@ -55,7 +60,7 @@ export default async function LocationsPage({ searchParams }: { searchParams: Se
       </section>
 
       <div className="space-y-6">
-        {levels.map((level) => (
+        {levels.map((level: LocationLevel) => (
           <Card key={level.id} variant="white" className="space-y-5">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div>
@@ -69,62 +74,66 @@ export default async function LocationsPage({ searchParams }: { searchParams: Se
               <Field label="Level name" name="name" defaultValue={level.name} />
               <Field label="Scene key" name="sceneKey" defaultValue={level.sceneKey} />
               <NumberField label="Order" name="sortOrder" defaultValue={level.sortOrder} />
-              <div className="flex items-end"><Button type="submit" size="sm">Save level</Button></div>
+              <div className="flex items-end"><SubmitButton size="sm" pendingLabel="Saving…">Save level</SubmitButton></div>
             </form>
 
             <div className="space-y-4">
-              {level.rooms.map((room) => (
-                <div key={room.id} className="rounded-2xl border border-warm-border bg-cream/70 p-4">
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                    <div>
-                      <h3 className="font-heading text-xl font-semibold text-deep-brown">{room.name}</h3>
-                      <p className="text-sm text-muted-text">{room.sceneKey}</p>
-                    </div>
+              {level.rooms.map((room: LocationRoom) => (
+                <details key={room.id} className="group rounded-2xl border border-warm-border bg-cream/70 p-4">
+                  <summary className="cursor-pointer rounded-2xl bg-white/60 px-4 py-3 marker:text-sage">
+                    <h3 className="inline font-heading text-xl font-semibold text-deep-brown">{room.name}</h3>
+                    <span className="ml-3 text-sm text-muted-text">{room.bookshelves.length} shelves · {room.sceneKey}</span>
+                  </summary>
+                  <div className="mt-4 flex flex-col gap-3 border-t border-warm-border pt-4 sm:flex-row sm:items-start sm:justify-between">
+                    <p className="text-sm text-muted-text">Use these controls to edit this room, adjust order, or delete it intentionally.</p>
                     <ReorderAndDelete id={room.id} reorderAction={reorderRoomAction} deleteAction={deleteRoomAction} deleteLabel="Delete room" />
                   </div>
                   <form action={updateRoomAction} className="mt-4 grid gap-3 rounded-2xl bg-white/60 p-4 md:grid-cols-5">
                     <input type="hidden" name="id" value={room.id} />
-                    <SelectField label="Level" name="levelId" defaultValue={room.levelId} options={levels.map((item) => ({ value: item.id, label: item.name }))} />
+                    <SelectField label="Level" name="levelId" defaultValue={room.levelId} options={levels.map((item: LocationLevel) => ({ value: item.id, label: item.name }))} />
                     <Field label="Room name" name="name" defaultValue={room.name} />
                     <Field label="Scene key" name="sceneKey" defaultValue={room.sceneKey} />
                     <NumberField label="Order" name="sortOrder" defaultValue={room.sortOrder} />
-                    <div className="flex items-end"><Button type="submit" size="sm">Save room</Button></div>
+                    <div className="flex items-end"><SubmitButton size="sm" pendingLabel="Saving…">Save room</SubmitButton></div>
                   </form>
 
                   <div className="mt-4 space-y-3">
-                    {room.bookshelves.map((shelf) => (
-                      <div key={shelf.id} className="rounded-2xl border border-blue-border bg-white/70 p-4">
-                        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                          <div>
-                            <div className="flex flex-wrap items-center gap-2">
-                              <h4 className="font-semibold text-deep-brown">{shelf.name}</h4>
-                              <Badge>{shelf.rowCount} rows</Badge>
-                              <Badge variant="blue">{shelf.depthCount} depth</Badge>
-                              <Badge variant="pink">{shelf.slots.length} slots</Badge>
-                            </div>
-                            <p className="mt-1 text-sm text-muted-text">{shelf.sceneKey}</p>
-                          </div>
+                    {room.bookshelves.map((shelf: LocationShelf) => (
+                      <details key={shelf.id} className="group rounded-2xl border border-blue-border bg-white/70 p-4">
+                        <summary className="cursor-pointer rounded-2xl bg-cream/70 px-4 py-3 marker:text-sage">
+                          <span className="font-semibold text-deep-brown">{shelf.name}</span>
+                          <span className="ml-3 inline-flex flex-wrap items-center gap-2 align-middle">
+                            <Badge>{shelf.rowCount} rows</Badge>
+                            <Badge variant="blue">{shelf.depthCount} depth</Badge>
+                            <Badge variant="pink">{shelf.slots.length} slots</Badge>
+                          </span>
+                          <span className="ml-3 text-sm text-muted-text">{shelf.sceneKey}</span>
+                        </summary>
+                        <div className="mt-4 flex flex-col gap-3 border-t border-blue-border pt-4 sm:flex-row sm:items-start sm:justify-between">
+                          <p className="text-sm text-muted-text">Use these controls to change shelf dimensions, move it, adjust order, or delete it intentionally.</p>
                           <ReorderAndDelete id={shelf.id} reorderAction={reorderBookshelfAction} deleteAction={deleteBookshelfAction} deleteLabel="Delete shelf" />
                         </div>
-                        <form action={updateBookshelfAction} className="mt-4 grid gap-3 md:grid-cols-6">
+                        <form action={updateBookshelfAction} className="mt-4 grid gap-3 rounded-2xl bg-cream/50 p-4 md:grid-cols-6">
                           <input type="hidden" name="id" value={shelf.id} />
-                          <SelectField label="Room" name="roomId" defaultValue={shelf.roomId} options={rooms.map((item) => ({ value: item.id, label: `${item.levelName} / ${item.name}` }))} />
+                          <SelectField label="Room" name="roomId" defaultValue={shelf.roomId} options={rooms.map((item: RoomWithLevel) => ({ value: item.id, label: `${item.levelName} / ${item.name}` }))} />
                           <Field label="Shelf name" name="name" defaultValue={shelf.name} />
                           <Field label="Scene key" name="sceneKey" defaultValue={shelf.sceneKey} />
-                          <NumberField label="Rows" name="rowCount" defaultValue={shelf.rowCount} min={1} />
-                          <NumberField label="Depth" name="depthCount" defaultValue={shelf.depthCount} min={1} />
+                          <div className="grid gap-3 md:col-span-3 md:grid-cols-3">
+                            <NumberField label="Rows" name="rowCount" defaultValue={shelf.rowCount} min={1} />
+                            <NumberField label="Depth" name="depthCount" defaultValue={shelf.depthCount} min={1} />
+                            <NumberField label="Width" name="widthUnits" defaultValue={shelf.widthUnits} min={1} />
+                          </div>
                           <NumberField label="Order" name="sortOrder" defaultValue={shelf.sortOrder} />
-                          <NumberField label="Width" name="widthUnits" defaultValue={shelf.widthUnits} min={1} />
                           <label className="md:col-span-4 text-sm font-semibold text-deep-brown">
                             Notes
                             <input name="notes" defaultValue={shelf.notes ?? ""} className="mt-1 w-full rounded-2xl border border-warm-border bg-cream px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-sage" />
                           </label>
-                          <div className="flex items-end"><Button type="submit" size="sm">Save shelf</Button></div>
+                          <div className="flex items-end"><SubmitButton size="sm" pendingLabel="Saving…">Save shelf</SubmitButton></div>
                         </form>
-                      </div>
+                      </details>
                     ))}
                   </div>
-                </div>
+                </details>
               ))}
             </div>
           </Card>
@@ -150,7 +159,7 @@ function CreateLevelForm() {
         <Field label="Level name" name="name" placeholder="Basement" />
         <Field label="Scene key" name="sceneKey" placeholder="level.basement" />
         <NumberField label="Order" name="sortOrder" defaultValue={10} />
-        <Button type="submit" size="sm">Add level</Button>
+        <SubmitButton size="sm" pendingLabel="Adding…">Add level</SubmitButton>
       </form>
     </Card>
   );
@@ -160,11 +169,11 @@ function CreateRoomForm({ levels }: { levels: { id: string; name: string }[] }) 
   return (
     <Card title="Add room" variant="pink">
       <form action={createRoomAction} className="mt-4 space-y-3">
-        <SelectField label="Level" name="levelId" options={levels.map((level) => ({ value: level.id, label: level.name }))} />
+        <SelectField label="Level" name="levelId" options={levels.map((level: { id: string; name: string }) => ({ value: level.id, label: level.name }))} />
         <Field label="Room name" name="name" placeholder="Living Room" />
         <Field label="Scene key" name="sceneKey" placeholder="room.downstairs.living-room" />
         <NumberField label="Order" name="sortOrder" defaultValue={10} />
-        <Button type="submit" size="sm">Add room</Button>
+        <SubmitButton size="sm" pendingLabel="Adding…">Add room</SubmitButton>
       </form>
     </Card>
   );
@@ -174,7 +183,7 @@ function CreateBookshelfForm({ rooms }: { rooms: { id: string; name: string; lev
   return (
     <Card title="Add bookshelf" variant="blue">
       <form action={createBookshelfAction} className="mt-4 space-y-3">
-        <SelectField label="Room" name="roomId" options={rooms.map((room) => ({ value: room.id, label: `${room.levelName} / ${room.name}` }))} />
+        <SelectField label="Room" name="roomId" options={rooms.map((room: { id: string; name: string; levelName: string }) => ({ value: room.id, label: `${room.levelName} / ${room.name}` }))} />
         <Field label="Shelf name" name="name" placeholder="Living Room Shelf" />
         <Field label="Scene key" name="sceneKey" placeholder="shelf.downstairs.living-room.main" />
         <div className="grid grid-cols-3 gap-3">
@@ -184,7 +193,7 @@ function CreateBookshelfForm({ rooms }: { rooms: { id: string; name: string; lev
         </div>
         <NumberField label="Width" name="widthUnits" defaultValue={1} min={1} />
         <input type="hidden" name="notes" value="" />
-        <Button type="submit" size="sm">Add bookshelf</Button>
+        <SubmitButton size="sm" pendingLabel="Adding…">Add bookshelf</SubmitButton>
       </form>
     </Card>
   );
@@ -206,16 +215,23 @@ function ReorderAndDelete({
       <form action={reorderAction}>
         <input type="hidden" name="id" value={id} />
         <input type="hidden" name="direction" value="up" />
-        <Button type="submit" variant="outline" size="sm">↑</Button>
+        <SubmitButton variant="outline" size="sm" pendingLabel="…">↑</SubmitButton>
       </form>
       <form action={reorderAction}>
         <input type="hidden" name="id" value={id} />
         <input type="hidden" name="direction" value="down" />
-        <Button type="submit" variant="outline" size="sm">↓</Button>
+        <SubmitButton variant="outline" size="sm" pendingLabel="…">↓</SubmitButton>
       </form>
       <form action={deleteAction}>
         <input type="hidden" name="id" value={id} />
-        <Button type="submit" variant="secondary" size="sm">{deleteLabel}</Button>
+        <SubmitButton
+          variant="danger"
+          size="sm"
+          pendingLabel="Deleting…"
+          confirmMessage={`${deleteLabel}? This cannot be undone.`}
+        >
+          {deleteLabel}
+        </SubmitButton>
       </form>
     </div>
   );
@@ -247,14 +263,14 @@ function SelectField({
 }: {
   label: string;
   name: string;
-  options: { value: string; label: string }[];
+  options: SelectOption[];
   defaultValue?: string;
 }) {
   return (
     <label className="block text-sm font-semibold text-deep-brown">
       {label}
       <select name={name} defaultValue={defaultValue} required className="mt-1 w-full rounded-2xl border border-warm-border bg-cream px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-sage">
-        {options.map((option) => (
+        {options.map((option: SelectOption) => (
           <option key={option.value} value={option.value}>{option.label}</option>
         ))}
       </select>

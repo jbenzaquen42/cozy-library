@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useTransition } from "react";
+import { lookupMetadataAction } from "@/app/scan/metadata-actions";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { BarcodeScanner } from "./BarcodeScanner";
@@ -12,28 +13,28 @@ export function ScanFlow() {
   const [results, setResults] = useState<MetadataLookupResult[]>([]);
   const [status, setStatus] = useState("Ready to scan or type an ISBN.");
   const [loading, setLoading] = useState(false);
+  const [pending, startTransition] = useTransition();
   const normalized = useMemo(() => normalizeIsbn(isbn), [isbn]);
 
-  async function lookup(nextIsbn = normalized) {
+  function lookup(nextIsbn = normalized) {
     if (!isLikelyIsbn(nextIsbn)) {
       setStatus("Enter or scan a 10- or 13-digit ISBN first.");
       return;
     }
     setLoading(true);
     setStatus(`Looking up ISBN ${nextIsbn}…`);
-    try {
-      const response = await fetch(`/api/trpc/metadata.lookup?input=${encodeURIComponent(JSON.stringify({ json: { isbn: nextIsbn } }))}`);
-      if (!response.ok) throw new Error("Metadata lookup failed");
-      const payload = await response.json() as { result?: { data?: { json?: MetadataLookupResult[] } } };
-      const found = payload.result?.data?.json ?? [];
-      setResults(found);
-      setStatus(found.length > 0 ? `Found ${found.length} metadata source${found.length === 1 ? "" : "s"}.` : "No metadata found. You can still add the book manually.");
-    } catch (error) {
-      setResults([]);
-      setStatus(error instanceof Error ? error.message : "Metadata lookup failed. You can still add the book manually.");
-    } finally {
-      setLoading(false);
-    }
+    startTransition(async () => {
+      try {
+        const found = await lookupMetadataAction(nextIsbn);
+        setResults(found);
+        setStatus(found.length > 0 ? `Found ${found.length} metadata source${found.length === 1 ? "" : "s"}.` : "No metadata found. You can still add the book manually.");
+      } catch (error) {
+        setResults([]);
+        setStatus(error instanceof Error ? error.message : "Metadata lookup failed. You can still add the book manually.");
+      } finally {
+        setLoading(false);
+      }
+    });
   }
 
   function handleIsbn(nextIsbn: string) {
@@ -54,8 +55,9 @@ export function ScanFlow() {
 
       <Card variant="white" title="Manual fallback">
         <div className="mt-4 flex flex-col gap-3 sm:flex-row">
-          <input name="isbn" value={isbn} onChange={(event) => setIsbn(event.target.value)} placeholder="Type ISBN" className="w-full rounded-2xl border border-warm-border bg-cream px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-sage" />
-          <Button type="button" onClick={() => void lookup()} disabled={loading}>{loading ? "Looking…" : "Lookup"}</Button>
+          <label className="sr-only" htmlFor="isbn-scan-input">ISBN</label>
+          <input id="isbn-scan-input" name="isbn" value={isbn} onChange={(event) => setIsbn(event.target.value)} placeholder="Type ISBN" className="w-full rounded-2xl border border-warm-border bg-cream px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-sage" />
+          <Button type="button" onClick={() => void lookup()} disabled={loading || pending}>{loading || pending ? "Looking…" : "Lookup"}</Button>
         </div>
         <p className="mt-3 text-sm text-muted-text">{status}</p>
       </Card>

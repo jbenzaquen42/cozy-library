@@ -25,6 +25,7 @@ export function BottomNav({ onMenuOpen }: { onMenuOpen: () => void }) {
             <li key={item.href} className="flex-1">
               <Link
                 href={item.href}
+                aria-current={isActive ? "page" : undefined}
                 className={cn(
                   "flex flex-col items-center gap-1 rounded-xl py-2 text-xs font-semibold transition-colors",
                   isActive ? "text-deep-brown" : "text-muted-text"

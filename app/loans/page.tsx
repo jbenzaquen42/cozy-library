@@ -1,54 +1,54 @@
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
+import { FlashBanner } from "@/components/ui/flash-banner";
 import { PageHeader } from "@/components/ui/page-header";
+import { SubmitButton } from "@/components/ui/submit-button";
 import { listLoans } from "@/lib/db/loans";
+import { formatDate } from "@/lib/utils";
 import { returnLoanAction } from "./actions";
 
 export const dynamic = "force-dynamic";
 
 type SearchParams = Promise<{ error?: string; saved?: string }>;
+type Loan = Awaited<ReturnType<typeof listLoans>>[number];
 
 export default async function LoansPage({ searchParams }: { searchParams: SearchParams }) {
-  const [{ error, saved }, activeLoans, allLoans] = await Promise.all([
+  const [, activeLoans, allLoans] = await Promise.all([
     searchParams,
     listLoans({ activeOnly: true }),
     listLoans(),
   ]);
-  const history = allLoans.filter((loan) => loan.dateReturned);
+  const history = allLoans.filter((loan: Loan) => loan.dateReturned);
 
   return (
     <div className="mx-auto max-w-5xl space-y-6">
       <PageHeader label="Library" title="Loans" />
-      {error ? <div className="rounded-2xl border border-soft-red/30 bg-soft-red/10 p-4 text-sm font-semibold text-deep-brown">{error}</div> : null}
-      {saved ? <div className="rounded-2xl border border-sage/30 bg-sage/10 p-4 text-sm font-semibold text-deep-brown">Loan updated.</div> : null}
+      <FlashBanner successMessage="Loan updated." />
 
       <Card variant="cream" title="Active loans">
         {activeLoans.length === 0 ? (
           <EmptyState title="No active loans" message="Loan a copy from a book detail page." />
         ) : (
           <div className="mt-4 space-y-4">
-            {activeLoans.map((loan) => <LoanRow key={loan.id} loan={loan} active />)}
+            {activeLoans.map((loan: Loan) => <LoanRow key={loan.id} loan={loan} active />)}
           </div>
         )}
       </Card>
 
       <Card variant="white" title="Loan history">
         {history.length === 0 ? (
-          <p className="mt-3 text-muted-text">Returned loans will appear here.</p>
+          <EmptyState title="No loan history" message="Returned loans will appear here." />
         ) : (
           <div className="mt-4 space-y-4">
-            {history.map((loan) => <LoanRow key={loan.id} loan={loan} />)}
+            {history.map((loan: Loan) => <LoanRow key={loan.id} loan={loan} />)}
           </div>
         )}
       </Card>
     </div>
   );
 }
-
-type Loan = Awaited<ReturnType<typeof listLoans>>[number];
 
 function LoanRow({ loan, active = false }: { loan: Loan; active?: boolean }) {
   return (
@@ -59,8 +59,8 @@ function LoanRow({ loan, active = false }: { loan: Loan; active?: boolean }) {
             {loan.copy.book.title}
           </Link>
           <p className="text-sm text-muted-text">Copy {loan.copy.copyLabel} loaned to {loan.borrowerName}</p>
-          <p className="text-sm text-soft-brown">Loaned {loan.dateLoaned.toLocaleDateString()}</p>
-          {loan.dateReturned ? <p className="text-sm text-soft-brown">Returned {loan.dateReturned.toLocaleDateString()}</p> : null}
+          <p className="text-sm text-soft-brown">Loaned {formatDate(loan.dateLoaned)}</p>
+          {loan.dateReturned ? <p className="text-sm text-soft-brown">Returned {formatDate(loan.dateReturned)}</p> : null}
           {loan.notes ? <p className="mt-2 text-sm text-muted-text">{loan.notes}</p> : null}
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -70,7 +70,7 @@ function LoanRow({ loan, active = false }: { loan: Loan; active?: boolean }) {
               <input type="hidden" name="loanId" value={loan.id} />
               <input type="hidden" name="bookId" value={loan.copy.book.id} />
               <input type="hidden" name="returnTo" value="/loans" />
-              <Button type="submit" size="sm">Return</Button>
+              <SubmitButton size="sm" pendingLabel="Returning…" confirmMessage="Mark this loan as returned?">Return</SubmitButton>
             </form>
           ) : null}
         </div>

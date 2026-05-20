@@ -45,3 +45,36 @@ a {
   color: inherit;
   text-decoration: none;
 }
+
+@keyframes shelf-slide-next {
+  0% {
+    opacity: 0;
+    transform: translateX(2.5rem) scale(0.96);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+@keyframes shelf-slide-previous {
+  0% {
+    opacity: 0;
+    transform: translateX(-2.5rem) scale(0.96);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}

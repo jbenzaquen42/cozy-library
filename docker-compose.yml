@@ -17,6 +17,7 @@ services:
       retries: 10
 
   web:
+    image: jbenzaquen/cozy-library:latest
     build: .
     restart: unless-stopped
     depends_on:
@@ -26,14 +27,13 @@ services:
       DATABASE_URL: postgresql://library:library_password@postgres:5432/library
       APP_DATA_DIR: /data
       APP_BASE_URL: http://localhost:3000
-      APP_CONTACT_EMAIL: replace-me@example.com
+      APP_CONTACT_EMAIL: local-use@cozy-library.invalid
       GOOGLE_BOOKS_API_KEY: ""
       ISBNDB_API_KEY: ""
       HARDCOVER_API_TOKEN: ""
       HARDCOVER_API_TOKEN_FILE: ""
+      DEMO_CATALOG_MODE: skip
       ENABLE_OCR: "true"
-      ENABLE_3D: "true"
-      BLENDER_MODEL_PATH: /models/home-library.glb
     ports:
       - "3000:3000"
     volumes:

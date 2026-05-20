@@ -3,7 +3,7 @@
 import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import type { OcrResult } from "@/app/scan/actions";
+import type { OcrResult } from "@/lib/scan/ocr";
 
 type OcrState = "idle" | "uploading" | "ready" | "error";
 

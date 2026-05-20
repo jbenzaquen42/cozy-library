@@ -1,6 +1,7 @@
 import { getSettingsStatus } from "@/lib/db/settings";
 import { PageHeader } from "@/components/ui/page-header";
 import { Card } from "@/components/ui/card";
+import { ErrorMessage } from "@/components/ui/error-message";
 
 export const dynamic = "force-dynamic";
 
@@ -9,7 +10,7 @@ export default function SettingsPage() {
 
   return (
     <div className="mx-auto max-w-3xl">
-      <PageHeader label="Settings" title="Application status" />
+      <PageHeader label="Status" title="Application status" />
       <SettingsStatus settingsPromise={settingsPromise} />
     </div>
   );
@@ -20,7 +21,11 @@ async function SettingsStatus({
 }: {
   settingsPromise: ReturnType<typeof getSettingsStatus>;
 }) {
-  const settings = await settingsPromise;
+  const settings = await settingsPromise.catch((error: unknown) => ({ error }));
+
+  if ("error" in settings) {
+    return <ErrorMessage error={settings.error instanceof Error ? settings.error : new Error("Unable to load application status.")} />;
+  }
 
   return (
     <div className="space-y-4">
@@ -33,7 +38,7 @@ async function SettingsStatus({
       <Card variant="blue" title="App data directory">
         <p className="text-muted-text">{settings.paths.dataDir}</p>
       </Card>
-      <Card variant="pink" title="Provider placeholders">
+      <Card variant="pink" title="Provider status">
         <p className="text-muted-text">
           Google Books key:{" "}
           {settings.providers.googleBooksConfigured

@@ -1,7 +1,8 @@
 import { notFound } from "next/navigation";
-import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { FlashBanner } from "@/components/ui/flash-banner";
 import { PageHeader } from "@/components/ui/page-header";
+import { SubmitButton } from "@/components/ui/submit-button";
 import { getBook } from "@/lib/db/books";
 import { updateBookAction } from "../../actions";
 
@@ -12,14 +13,14 @@ type SearchParams = Promise<{ error?: string }>;
 
 export default async function EditBookPage({ params, searchParams }: { params: Params; searchParams: SearchParams }) {
   const { id } = await params;
-  const { error } = await searchParams;
+  await searchParams;
   const book = await getBook(id).catch(() => null);
   if (!book) notFound();
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
       <PageHeader label="Library" title={`Edit ${book.title}`} />
-      {error ? <div className="rounded-2xl border border-soft-red/30 bg-soft-red/10 p-4 text-sm font-semibold text-deep-brown">{error}</div> : null}
+      <FlashBanner />
       <Card variant="cream" title="Book metadata">
         <form action={updateBookAction} className="mt-5 grid gap-4 md:grid-cols-2">
           <input type="hidden" name="id" value={book.id} />
@@ -38,7 +39,7 @@ export default async function EditBookPage({ params, searchParams }: { params: P
             Description
             <textarea name="description" defaultValue={book.description ?? ""} rows={4} className="mt-1 w-full rounded-2xl border border-warm-border bg-cream px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-sage" />
           </label>
-          <div className="md:col-span-2"><Button type="submit">Save book</Button></div>
+          <div className="md:col-span-2"><SubmitButton pendingLabel="Saving…">Save book</SubmitButton></div>
         </form>
       </Card>
     </div>

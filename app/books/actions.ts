@@ -23,6 +23,11 @@ function optionalNumberText(formData: FormData, key: string) {
   return value === "" ? undefined : value;
 }
 
+function optionalUuidText(formData: FormData, key: string) {
+  const value = text(formData, key);
+  return value === "" ? undefined : value;
+}
+
 function bookPayload(formData: FormData) {
   return {
     title: text(formData, "title"),
@@ -51,7 +56,7 @@ export async function createManualBookAction(formData: FormData) {
     const book = await createManualBook(
       createManualBookInputSchema.parse({
         ...bookPayload(formData),
-        locationSlotId: text(formData, "locationSlotId"),
+        locationSlotId: optionalUuidText(formData, "locationSlotId"),
         condition: text(formData, "condition"),
         notes: text(formData, "notes"),
       }),
@@ -82,7 +87,7 @@ export async function addCopyAction(formData: FormData) {
     await createCopy(
       copyInputSchema.parse({
         bookId,
-        locationSlotId: text(formData, "locationSlotId"),
+        locationSlotId: optionalUuidText(formData, "locationSlotId"),
         condition: text(formData, "condition"),
         notes: text(formData, "notes"),
       }),
@@ -108,7 +113,7 @@ export async function renameCopyAction(formData: FormData) {
 export async function moveCopyAction(formData: FormData) {
   const bookId = text(formData, "bookId");
   try {
-    await moveCopy(moveCopyInputSchema.parse({ id: text(formData, "id"), locationSlotId: text(formData, "locationSlotId") }));
+    await moveCopy(moveCopyInputSchema.parse({ id: text(formData, "id"), locationSlotId: optionalUuidText(formData, "locationSlotId") }));
     revalidatePath(`/books/${bookId}`);
   } catch (error) {
     fail(`/books/${bookId}`, error);

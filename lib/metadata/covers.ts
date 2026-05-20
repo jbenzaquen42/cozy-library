@@ -2,7 +2,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 export function getDataDir() {
-  return process.env.APP_DATA_DIR ?? path.join(process.cwd(), ".data");
+  return process.env.APP_DATA_DIR ?? path.join(/*turbopackIgnore: true*/ process.cwd(), ".data");
 }
 
 export async function cacheCoverImage(bookId: string, coverUrl?: string) {

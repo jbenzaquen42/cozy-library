@@ -15,12 +15,12 @@ export default function HousePage() {
             Open 2D view
           </Button>
         </Card>
-        <Card variant="pink" title="3D House">
+        <Card variant="pink" title="Living Room Shelf View">
           <p className="mb-4 text-muted-text">
-            Walk through your home in 3D.
+            Switch between the real bookshelves from a straight-on room view.
           </p>
           <Button href="/house/3d" variant="secondary" size="sm">
-            Open 3D view
+            Open shelf view
           </Button>
         </Card>
       </div>

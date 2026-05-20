@@ -5,7 +5,7 @@ dist
 coverage
 .env
 .env*.local
-cozy_home_library_blender_docs_v3/
+internal-docs/
 playwright-report
 test-results
 npm-debug.log*

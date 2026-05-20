@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -31,6 +32,8 @@ export function House2DBrowser({ levels }: { levels: HouseBrowserLevel[] }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const shelves = useMemo(() => levels.flatMap((level) => level.rooms.flatMap((room) => room.shelves)), [levels]);
+  const mappedSceneKeys = useMemo(() => new Set(MAP_SHELVES.map((item) => item.sceneKey)), []);
+  const unmappedShelves = useMemo(() => shelves.filter((shelf) => !mappedSceneKeys.has(shelf.sceneKey)), [shelves, mappedSceneKeys]);
   const shelfParam = searchParams.get("shelf");
   const selectedShelf = shelves.find((shelf) => shelf.sceneKey === shelfParam) ?? shelves[0] ?? null;
   const [depthView, setDepthView] = useState<DepthView>(searchParams.get("depth") === "back" ? "back" : "front");
@@ -53,15 +56,15 @@ export function House2DBrowser({ levels }: { levels: HouseBrowserLevel[] }) {
   return (
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
       <div className="space-y-6">
-        <Card variant="blue" title="House map">
+        <Card variant="blue" title="Default house map">
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-            <p className="text-sm text-muted-text">Click a shelf on the SVG map. Selection is stored in the URL.</p>
+            <p className="text-sm text-muted-text">Click a shelf on the SVG map. User-created shelves appear below. Selection is stored in the URL.</p>
             <div className="flex gap-2" aria-label="Depth view">
               <Button type="button" size="sm" variant={depthView === "front" ? "primary" : "outline"} onClick={() => selectDepth("front")}>
-                Front depth
+                Front
               </Button>
               <Button type="button" size="sm" variant={depthView === "back" ? "primary" : "outline"} onClick={() => selectDepth("back")}>
-                Back depth
+                Back
               </Button>
             </div>
           </div>
@@ -99,7 +102,7 @@ export function House2DBrowser({ levels }: { levels: HouseBrowserLevel[] }) {
                       onKeyDown={(event) => {
                         if (event.key === "Enter" || event.key === " ") selectShelf(shelf.sceneKey);
                       }}
-                      className="cursor-pointer outline-none transition-opacity hover:opacity-80"
+                      className="cursor-pointer transition-opacity hover:opacity-80 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sage"
                       fill={selected ? "#a8d5ba" : "#b99068"}
                       stroke={selected ? "#567760" : "#7b553b"}
                       strokeWidth={selected ? "4" : "2"}
@@ -116,6 +119,29 @@ export function House2DBrowser({ levels }: { levels: HouseBrowserLevel[] }) {
             </svg>
           </div>
         </Card>
+
+        {unmappedShelves.length > 0 && (
+          <Card variant="cream" title={`${unmappedShelves.length} shelf${unmappedShelves.length === 1 ? "" : "ves"} not on the map`}>
+            <p className="text-sm text-muted-text">These shelves were added after the default layout and don&apos;t have SVG map positions. Click a shelf name to select it.</p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {unmappedShelves.map((shelf) => {
+                const copyCount = shelf.slots.reduce((total, slot) => total + slot.copies.length, 0);
+                const selected = selectedShelf?.sceneKey === shelf.sceneKey;
+                return (
+                  <button
+                    key={shelf.sceneKey}
+                    type="button"
+                    onClick={() => selectShelf(shelf.sceneKey)}
+                    className={`rounded-2xl border px-4 py-2 text-left text-sm font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-sage focus:ring-offset-2 ${selected ? "border-deep-brown bg-deep-brown text-cream" : "border-warm-border bg-white/70 text-deep-brown hover:bg-white"}`}
+                  >
+                    {shelf.name}
+                    <span className={`ml-2 text-xs ${selected ? "text-cream/70" : "text-muted-text"}`}>{copyCount} copies</span>
+                  </button>
+                );
+              })}
+            </div>
+          </Card>
+        )}
 
         <SelectedShelfGrid shelf={selectedShelf} depthView={depthView} />
       </div>
@@ -156,9 +182,9 @@ function SelectedShelfGrid({ shelf, depthView }: { shelf: HouseBrowserShelf | nu
                   <ul className="grid gap-2 sm:grid-cols-2">
                     {slot.copies.map((copy) => (
                       <li key={copy.id} className="rounded-xl bg-white/75 p-2 text-sm">
-                        <a href={`/books/${copy.bookId}`} className="font-semibold text-deep-brown underline-offset-2 hover:underline">
+                        <Link href={`/books/${copy.bookId}`} className="font-semibold text-deep-brown underline-offset-2 hover:underline">
                           {copy.title}
-                        </a>
+                        </Link>
                         <p className="text-xs text-muted-text">Copy {copy.copyLabel} · {copy.displayAuthor}</p>
                       </li>
                     ))}

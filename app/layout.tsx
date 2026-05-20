@@ -28,6 +28,12 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${crimsonPro.variable} ${nunito.variable}`}>
       <body className="antialiased">
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[70] focus:rounded-2xl focus:bg-deep-brown focus:px-5 focus:py-3 focus:text-sm focus:font-semibold focus:text-cream focus:shadow-xl focus:outline-none"
+        >
+          Skip to content
+        </a>
         <AppShell>{children}</AppShell>
       </body>
     </html>
