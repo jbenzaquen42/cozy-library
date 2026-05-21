@@ -64,7 +64,7 @@ function SelectSlot({ levels }: { levels: LocationLevels }) {
     <label className="text-sm font-semibold text-deep-brown">
       Exact shelf slot
       <select name="locationSlotId" className="mt-1 w-full rounded-2xl border border-warm-border bg-cream px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-sage">
-        <option value="">Unshelved queue</option>
+        <option value="">Books waiting for a home</option>
         {levels.flatMap((level: LocationLevel) =>
           level.rooms.flatMap((room: LocationRoom) =>
             room.bookshelves.flatMap((shelf: LocationShelf) =>

@@ -51,7 +51,7 @@ export const DEFAULT_HOUSE_LAYOUT: LevelSeed[] = [
         sortOrder: 1,
         shelves: [
           {
-            name: "Entry Shelf",
+            name: "Hedgehog Shelf",
             sceneKey: DEFAULT_SCENE_KEYS.shelves.downstairsEntryShelf,
             rowCount: 5,
             depthCount: 2,
@@ -72,21 +72,21 @@ export const DEFAULT_HOUSE_LAYOUT: LevelSeed[] = [
         sortOrder: 1,
         shelves: [
           {
-            name: "Hallway Bookcase 1",
+            name: "Rabbit Shelf",
             sceneKey: DEFAULT_SCENE_KEYS.shelves.upstairsHallwayBookcase1,
             rowCount: 3,
             depthCount: 2,
             sortOrder: 1,
           },
           {
-            name: "Hallway Bookcase 2",
+            name: "Wren Shelf",
             sceneKey: DEFAULT_SCENE_KEYS.shelves.upstairsHallwayBookcase2,
             rowCount: 3,
             depthCount: 2,
             sortOrder: 2,
           },
           {
-            name: "Hallway Bookcase 3",
+            name: "Fox Shelf",
             sceneKey: DEFAULT_SCENE_KEYS.shelves.upstairsHallwayBookcase3,
             rowCount: 3,
             depthCount: 2,
@@ -95,14 +95,14 @@ export const DEFAULT_HOUSE_LAYOUT: LevelSeed[] = [
         ],
       },
       {
-        name: "Reading Room / Study",
+        name: "Reading Room",
         sceneKey: DEFAULT_SCENE_KEYS.rooms.upstairsStudy,
         sortOrder: 2,
         shelves: [
           {
-            name: "Study Shelf",
+            name: "Fawn Shelf",
             sceneKey: DEFAULT_SCENE_KEYS.shelves.upstairsStudyShelf,
-            rowCount: 4,
+            rowCount: 5,
             depthCount: 2,
             sortOrder: 1,
           },

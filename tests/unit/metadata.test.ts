@@ -20,6 +20,7 @@ function book(overrides: Partial<Book> = {}): Book {
     seriesName: null,
     seriesNumber: null,
     coverImagePath: null,
+    spineColor: null,
     metadataJson: {},
     metadataSource: null,
     createdAt: new Date(0),

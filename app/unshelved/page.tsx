@@ -11,9 +11,9 @@ export default async function UnshelvedPage() {
 
   return (
     <div className="mx-auto max-w-5xl space-y-6">
-      <PageHeader label="Library" title="Unshelved queue" />
-      <Card variant="cream" title={`${copies.length} copies without a shelf slot`}>
-        <p className="text-muted-text">Use this queue for newly scanned/imported books before assigning them to shelf slots.</p>
+      <PageHeader label="Library" title="Books waiting for a home" />
+      <Card variant="cream" title={`${copies.length} copies waiting for a shelf spot`}>
+        <p className="text-muted-text">Newly scanned or displaced books rest here until you settle them onto a shelf.</p>
         <div className="mt-5 grid gap-3">
           {copies.length ? copies.map((copy) => (
             <div key={copy.id} className="rounded-2xl border border-warm-border bg-white/70 p-4">
@@ -23,10 +23,10 @@ export default async function UnshelvedPage() {
                   <p className="text-sm text-muted-text">{copy.book.displayAuthor} · copy {copy.copyLabel}</p>
                   {copy.book.isbn13 || copy.book.isbn10 ? <p className="mt-1 text-xs text-muted-text">ISBN {copy.book.isbn13 ?? copy.book.isbn10}</p> : null}
                 </div>
-                <Link href={`/books/${copy.book.id}`} className="rounded-full border-2 border-warm-border px-4 py-2 text-sm font-semibold text-deep-brown hover:bg-cream">Move to shelf</Link>
+                <Link href={`/books/${copy.book.id}`} className="rounded-full border-2 border-warm-border px-4 py-2 text-sm font-semibold text-deep-brown hover:bg-cream">Choose a shelf spot</Link>
               </div>
             </div>
-          )) : <EmptyState title="No unshelved copies" message="Scan or add a book to get started." action={{ label: "Add book manually", href: "/books/new" }} />}
+          )) : <EmptyState title="Every book has a shelf spot" message="Scan or add a book whenever another one joins the library." action={{ label: "Add book manually", href: "/books/new" }} />}
         </div>
       </Card>
     </div>

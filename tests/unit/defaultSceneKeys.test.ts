@@ -14,7 +14,7 @@ describe("default house scene keys", () => {
             sceneKey: "room.downstairs.entry",
             shelves: [
               {
-                name: "Entry Shelf",
+                name: "Hedgehog Shelf",
                 sceneKey: "shelf.downstairs.entry.entry-shelf",
                 rowCount: 5,
                 depthCount: 2,
@@ -31,15 +31,15 @@ describe("default house scene keys", () => {
             name: "Hallway",
             sceneKey: "room.upstairs.hallway",
             shelves: [
-              { sceneKey: "shelf.upstairs.hallway.bookcase-1", rowCount: 3, depthCount: 2 },
-              { sceneKey: "shelf.upstairs.hallway.bookcase-2", rowCount: 3, depthCount: 2 },
-              { sceneKey: "shelf.upstairs.hallway.bookcase-3", rowCount: 3, depthCount: 2 },
+              { name: "Rabbit Shelf", sceneKey: "shelf.upstairs.hallway.bookcase-1", rowCount: 3, depthCount: 2 },
+              { name: "Wren Shelf", sceneKey: "shelf.upstairs.hallway.bookcase-2", rowCount: 3, depthCount: 2 },
+              { name: "Fox Shelf", sceneKey: "shelf.upstairs.hallway.bookcase-3", rowCount: 3, depthCount: 2 },
             ],
           },
           {
-            name: "Reading Room / Study",
+            name: "Reading Room",
             sceneKey: "room.upstairs.study",
-            shelves: [{ sceneKey: "shelf.upstairs.study.study-shelf", rowCount: 4, depthCount: 2 }],
+            shelves: [{ name: "Fawn Shelf", sceneKey: "shelf.upstairs.study.study-shelf", rowCount: 5, depthCount: 2 }],
           },
         ],
       },
@@ -56,7 +56,7 @@ describe("default house scene keys", () => {
   });
 
   it("counts all default shelf slots", () => {
-    expect(getDefaultShelfSlotCount()).toBe(36);
+    expect(getDefaultShelfSlotCount()).toBe(38);
   });
 
   it("defines the living-room browser shelf order and default active shelf", () => {

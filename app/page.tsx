@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
 import { LivingRoomBookshelfBrowser } from "@/components/house/LivingRoomBookshelfBrowser";
-import { getHouseBrowserData } from "@/lib/db/houseBrowser";
+import { getHouseBrowserData, getHouseBrowserUnshelvedCopies } from "@/lib/db/houseBrowser";
 import { listActiveLoans } from "@/lib/db/loans";
 import { formatDate } from "@/lib/utils";
 
@@ -11,28 +11,28 @@ export const dynamic = "force-dynamic";
 type ActiveLoan = Awaited<ReturnType<typeof listActiveLoans>>[number];
 
 export default async function Home() {
-  const [levels, activeLoans] = await Promise.all([getHouseBrowserData(), listActiveLoans()]);
+  const [levels, unshelvedCopies, activeLoans] = await Promise.all([getHouseBrowserData(), getHouseBrowserUnshelvedCopies(), listActiveLoans()]);
 
   return (
     <div className="mx-auto max-w-7xl space-y-6">
-      <PageHeader label="Home bookshelf locator" title="Cozy Home Library" />
+      <PageHeader label="Home library" title="Cozy Home Library" />
 
-      <LivingRoomBookshelfBrowser levels={levels} />
+      <LivingRoomBookshelfBrowser levels={levels} unshelvedCopies={unshelvedCopies} />
 
       <div className="grid gap-4 lg:grid-cols-3">
         <Card variant="cream" title="Catalog">
           <p className="text-sm text-muted-text">
-            Search and edit book records outside the room view.
+            Browse every book, cover, author, and shelf note in one place.
           </p>
         </Card>
         <Card variant="blue" title="Scan">
           <p className="text-sm text-muted-text">
-            Add physical copies by barcode or OCR, then place them on shelves.
+            Add a book by barcode or photo, then settle it onto a shelf.
           </p>
         </Card>
         <Card variant="pink" title="Locations">
           <p className="text-sm text-muted-text">
-            Keep room and shelf records aligned with the real house.
+            Keep room and bookcase names matched to the real house.
           </p>
         </Card>
       </div>
@@ -45,7 +45,7 @@ export default async function Home() {
           Add scanned book
         </Button>
         <Button href="/house/3d" variant="outline">
-          Open room view
+          Open reading nook
         </Button>
         <Button href="/settings" variant="outline">
           Status

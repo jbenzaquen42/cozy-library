@@ -2,34 +2,53 @@
 
 Use this checklist for closeout QA after major changes. Stage-specific exit checks remain recorded in `docs/current-stage.md`.
 
-## Stage 28 closeout status
+## Pre-1.0 closeout status (Stages 33–38)
 
-- [x] `npm audit --audit-level=moderate` passed during Stage 28 closeout validation.
-- [x] `npm run lint` passed during Stage 28 closeout validation.
-- [x] `npm run typecheck` passed during Stage 28 closeout validation.
-- [x] `npm run test` passed during Stage 28 closeout validation.
-- [x] `npm run build` passed during Stage 28 closeout validation.
-- [x] Docker Compose rebuilt successfully and smoke checks for `/`, `/catalog`, `/catalog?page=2`, `/import-export`, `/house/3d`, and `/settings` returned HTTP 200 during Stage 28 closeout validation.
-- [x] The README labels the recorded DockerHub digest as the last Stage 22 publish. A Stage 28 DockerHub publish remains an explicit release action, not an assumed local-build side effect.
+### Automated checks
 
-## Completed product surfaces
+- [x] `npm run typecheck` passed.
+- [x] `npm run lint` passed (0 errors, 0 warnings).
+- [x] `npm run test` passed: 7 files, 59 tests passed, 10 skipped.
+- [x] `npm run build` passed.
+- [x] `npm audit --audit-level=high` passed with 0 vulnerabilities.
+- [x] Docker Compose built and started successfully.
 
-- [x] Startup and settings pages are implemented with database/app-data/provider-key status checks.
-- [x] Catalog search and filters are implemented for title, author, ISBN, availability, level, room, bookshelf, row, and depth.
-- [x] Catalog results render through a 24-book `Load more` pattern, with documented small-library limits and a PostgreSQL search path for much larger libraries.
-- [x] Manual book creation/editing is implemented with validation and metadata-preserving merge behavior.
-- [x] Copy creation, labeling, relocation, and occupied shelf/slot protections are implemented.
-- [x] Loans can be created, blocked for unavailable copies, returned, and reviewed in history.
-- [x] Metadata lookup, cover caching, barcode scanning, OCR upload, and manual fallback flows are implemented.
-- [x] The 2D house browser remains available at `/house/2d` with stable scene-key navigation.
-- [x] `/` and `/house/3d` use the app-rendered living-room bookshelf browser without requiring an old full-house GLB.
-- [x] Living-room shelf switching works through on-screen arrows, keyboard arrows, and the right-side shelf switcher.
-- [x] Living-room browser regression tests cover shelf order, default/friendly names, occupancy, dense-row clipping, and bounded active shelf indexes.
-- [x] Docker/NAS startup, persistence, demo catalog modes, and token-file/env provider configuration are documented and validated for the published image.
-- [x] Production startup uses committed Prisma migrations and non-destructive default-house seeding.
-- [x] Dependencies are pinned to concrete versions and Prisma seed configuration lives in `prisma.config.ts`.
+### Route smoke checks
 
-## Deferred outside the completed stages
+- [x] `/` returned HTTP 200.
+- [x] `/house/3d` returned HTTP 200.
+- [x] `/catalog` returned HTTP 200.
+- [x] `/settings` returned HTTP 200.
+- [x] `/house/2d` returned HTTP 200.
+- [x] `/scan` returned HTTP 200.
+- [x] `/unshelved` returned HTTP 200.
 
-- Import/export and backup/restore remain optional future work; the direct page says this explicitly and the backend intentionally reports `NOT_IMPLEMENTED`.
-- Broader offline testing remains optional future hardening beyond the Stage 28 closeout smoke checks.
+### Living-room bookshelf browser (pre-1.0 polish)
+
+- [x] First-visit onboarding card appears and dismisses persistently.
+- [x] Help card explains shelf switching, peeking, opening, search, and moving books.
+- [x] All visible copy uses cottage-core language: "Your bookcases", "Books waiting for a home", "Settle here", "Take a closer look", etc.
+- [x] Book spines render with caps, page edges, gold-foil text, wood-grain shelves, and deterministic tilt.
+- [x] `+N` overflow badge appears when a row has more books than the visible limit.
+- [x] Selected book peek (`translate-y-4 scale-110 ring-4`) is obvious.
+- [x] Detail panel opens with `book-draw` animation and closes with soft settle-down transform.
+- [x] Mobile bottom-sheet shelf switcher works with close button and "Choose another bookcase" affordance.
+- [x] All critical tap targets are 44 px or larger (tooltip dismiss, detail close, mobile close, form inputs).
+- [x] Swipe navigation works on mobile with motion-safe hint for first visit.
+- [x] Local `.wav` sounds play on book select, shelf switch, move, and close; ambient loop toggles independently.
+- [x] Sound toggle, ambient toggle, volume, and reset are available from both the viewer popover and `/settings`.
+- [x] Settings card on `/settings` clearly distinguishes local browser preferences from server/database status.
+- [x] Keyboard navigation (arrows, Escape) still works.
+- [x] No old 3D runtime dependency (Three.js, React Three Fiber, GLB) exists.
+
+### Inventory integrity
+
+- [x] Real inventory counts remain intact: 375 books, 376 copies, 372 shelved, 4 unshelved.
+- [x] Shelf placement counts are plausible (Fawn 107, Hedgehog 98, Rabbit 60, Wren 47, Fox 60).
+
+## Deferred post-1.0
+
+- Import/export and backup/restore remain optional future work.
+- PostgreSQL full-text/trigram search for libraries beyond the current scale.
+- Optional decorative `living_room.blend`/GLB background (inventory stays database-owned).
+- Agent-browser QA pass on 375px mobile viewport (Chrome sandbox unavailable in this environment; HTTP smoke + CSS audit pass).

@@ -26,7 +26,7 @@ export default async function CatalogPage({ searchParams }: { searchParams: Sear
 
   return (
     <div className="mx-auto max-w-6xl space-y-5">
-      <PageHeader label="Library" title="Catalog">
+      <PageHeader label="Library shelves" title="Catalog">
         <Button href="/books/new" size="sm">Add book manually</Button>
       </PageHeader>
 
@@ -34,7 +34,7 @@ export default async function CatalogPage({ searchParams }: { searchParams: Sear
         <form className="grid gap-3 md:grid-cols-4">
           <label className="md:col-span-2 text-sm font-semibold text-deep-brown">
             Search
-            <input name="query" defaultValue={input.query} placeholder="Title, author, ISBN, location, notes" className="mt-1 w-full rounded-2xl border border-warm-border bg-cream px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-sage" />
+            <input name="query" defaultValue={input.query} placeholder="Title, author, ISBN, room, shelf…" className="mt-1 w-full rounded-2xl border border-warm-border bg-cream px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-sage" />
           </label>
           <Select name="availability" label="Availability" value={input.availability} options={[{ value: "all", label: "All" }, { value: "available", label: "Available" }, { value: "loaned", label: "Loaned" }]} />
           <Select name="view" label="View" value={view} options={[{ value: "grid", label: "Grid" }, { value: "list", label: "List" }]} />
@@ -63,11 +63,11 @@ export default async function CatalogPage({ searchParams }: { searchParams: Sear
           {catalogResults.totalCount} {catalogResults.totalCount === 1 ? "result" : "results"}
           {catalogResults.totalCount > 0 ? ` · showing ${catalogResults.shownCount}` : ""}
         </p>
-        {input.query ? <p>Ranked by ISBN, title, author, category, location, then notes.</p> : null}
+        {input.query ? <p>Best shelf matches appear first.</p> : null}
       </div>
 
       {catalogResults.totalCount === 0 ? (
-        <EmptyState title="No matching books" message="Try a broader search or add a manual book." action={{ label: "Add book manually", href: "/books/new" }} />
+        <EmptyState title="No matching books" message="Try a broader search, or add the book by hand." action={{ label: "Add book manually", href: "/books/new" }} />
       ) : (
         <>
           <div className={view === "grid" ? "grid gap-4 md:grid-cols-2 xl:grid-cols-3" : "space-y-4"}>
@@ -181,7 +181,7 @@ function BookCard({ book, rank, view }: { book: CatalogBook; rank: number; view:
 type CatalogBook = Awaited<ReturnType<typeof searchCatalog>>["items"][number]["book"];
 
 function summarizeLocations(copies: CatalogBook["copies"]) {
-  if (copies.length === 0) return "No copies assigned";
-  const names = Array.from(new Set(copies.map((copy: CatalogBook["copies"][number]) => copy.locationSlot ? `${copy.locationSlot.bookshelf.room.name} / ${copy.locationSlot.bookshelf.name}` : "Unshelved")));
+  if (copies.length === 0) return "No physical copies yet";
+  const names = Array.from(new Set(copies.map((copy: CatalogBook["copies"][number]) => copy.locationSlot ? `${copy.locationSlot.bookshelf.room.name} / ${copy.locationSlot.bookshelf.name}` : "Waiting for a shelf spot")));
   return names.length <= 2 ? names.join(", ") : `${names.slice(0, 2).join(", ")} +${names.length - 2} more`;
 }

@@ -8,10 +8,14 @@ export type HouseBrowserCopy = {
   bookId: string;
   title: string;
   displayAuthor: string;
+  spineColor: string | null;
+  copySpineColor: string | null;
+  coverImagePath: string | null;
+  shelfPosition: number | null;
 };
 
 export type HouseBrowserUnshelvedCopy = HouseBrowserCopy & {
-  createdAt: Date;
+  createdAt: string;
 };
 
 export type HouseBrowserSlot = {
@@ -79,8 +83,8 @@ export async function getHouseBrowserData(db: PrismaClient = defaultPrisma): Pro
                 orderBy: [{ rowIndex: "asc" }, { depthIndex: "asc" }],
                 include: {
                   copies: {
-                    orderBy: { copyLabel: "asc" },
-                    include: { book: { select: { id: true, title: true, displayAuthor: true } } },
+                    orderBy: [{ shelfPosition: "asc" }, { copyLabel: "asc" }],
+                    include: { book: { select: { id: true, title: true, displayAuthor: true, spineColor: true, coverImagePath: true } } },
                   },
                 },
               },
@@ -137,9 +141,34 @@ export async function getHouseBrowserData(db: PrismaClient = defaultPrisma): Pro
             bookId: copy.book.id,
             title: copy.book.title,
             displayAuthor: copy.book.displayAuthor,
+            spineColor: copy.book.spineColor,
+            copySpineColor: copy.spineColor,
+            coverImagePath: copy.book.coverImagePath,
+            shelfPosition: copy.shelfPosition,
           })),
         })),
       })),
     })),
   }));
+}
+
+export async function getHouseBrowserUnshelvedCopies(db: PrismaClient = defaultPrisma): Promise<HouseBrowserUnshelvedCopy[]> {
+  return db.copy.findMany({
+    where: { locationSlotId: null },
+    orderBy: [{ updatedAt: "desc" }, { copyLabel: "asc" }],
+    take: 24,
+    include: { book: { select: { id: true, title: true, displayAuthor: true, spineColor: true, coverImagePath: true } } },
+  }).then((copies) => copies.map((copy) => ({
+    id: copy.id,
+    copyLabel: copy.copyLabel,
+    status: copy.status,
+    bookId: copy.book.id,
+    title: copy.book.title,
+    displayAuthor: copy.book.displayAuthor,
+    spineColor: copy.book.spineColor,
+    copySpineColor: copy.spineColor,
+    coverImagePath: copy.book.coverImagePath,
+    shelfPosition: copy.shelfPosition,
+    createdAt: copy.createdAt.toISOString(),
+  })));
 }

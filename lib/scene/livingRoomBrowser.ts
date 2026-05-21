@@ -55,7 +55,16 @@ export function getShelfOccupancyPercent(shelf: HouseBrowserShelf) {
 
 export function getVisibleRowCopies(shelf: HouseBrowserShelf, rowIndex: number, limit = MAX_VISIBLE_BOOKS_PER_ROW) {
   const rowSlots = [...shelf.slots].filter((slot) => slot.rowIndex === rowIndex).sort((a, b) => a.depthIndex - b.depthIndex);
-  const copies = rowSlots.flatMap((slot) => slot.copies.map((copy, copyIndex) => ({ copy, slot, copyIndex })));
+  const copies = rowSlots
+    .flatMap((slot) => slot.copies.map((copy, copyIndex) => ({ copy, slot, copyIndex })))
+    .sort((left, right) => {
+      const leftPosition = left.copy.shelfPosition;
+      const rightPosition = right.copy.shelfPosition;
+      if (leftPosition !== null && rightPosition !== null && leftPosition !== rightPosition) return leftPosition - rightPosition;
+      if (leftPosition !== null && rightPosition === null) return -1;
+      if (leftPosition === null && rightPosition !== null) return 1;
+      return left.slot.depthIndex - right.slot.depthIndex || left.copyIndex - right.copyIndex || left.copy.title.localeCompare(right.copy.title);
+    });
   const visible = copies.slice(0, limit);
 
   return {

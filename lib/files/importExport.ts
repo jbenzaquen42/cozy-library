@@ -1,9 +1,9 @@
 import { AppError } from "../errors";
 
 export const importExportStatus = {
-  status: "deferred",
-  summary: "Import/export backup flows are intentionally deferred and are not exposed through primary navigation.",
-  recoveryGuidance: "Use PostgreSQL volume backups or pg_dump before making large catalog changes.",
+  status: "available" as const,
+  summary: "Export your complete library as a portable JSON backup file.",
+  recoveryGuidance: "Import this backup on any Cozy Library instance to recreate your shelves, books, and placements.",
 } as const;
 
 export async function previewCsvImport() {

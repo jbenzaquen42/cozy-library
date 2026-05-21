@@ -68,6 +68,27 @@ a {
   }
 }
 
+@keyframes book-draw {
+  0% {
+    opacity: 0;
+    transform: translateY(1.5rem) scale(0.92) rotate(-2deg);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1) rotate(0deg);
+  }
+}
+
+@keyframes shelf_slide_hint {
+  0%,
+  100% {
+    transform: translateX(-50%);
+  }
+  50% {
+    transform: translateX(calc(-50% + 0.75rem));
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

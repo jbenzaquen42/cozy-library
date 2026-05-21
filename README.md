@@ -40,35 +40,39 @@ The compose stack includes:
 - `web`: production Next.js server
 - `postgres`: PostgreSQL 16
 - `postgres-data`: named volume for database persistence
-- `library-data`: named volume mounted at `/data` for future cover, upload, and thumbnail storage
+- `library-data`: named volume mounted at `/data` for covers/uploads/local app files
+
+Detailed setup guides:
+
+- `docs/docker-setup.md` for general Docker Compose setup.
+- `docs/dockge-setup.md` for NAS/Dockge setup and migration recovery.
+- `docker-compose.example.yml` for copy/paste server stacks.
+- `.env.real-library.example` for real-library installs.
+- `.env.demo.example` for demo installs.
 
 The `web` service is tagged locally as `jbenzaquen/cozy-library:latest` so the same image can be pushed to DockerHub after validation.
 
 On startup, the production container applies committed Prisma migrations with `prisma migrate deploy`, then seeds the default house layout. The default house seed creates missing levels, rooms, bookshelves, and shelf slots and updates labels/sort metadata without deleting occupied shelf slots.
 
+Existing NAS databases from before 1.0 may need a one-time recovery setting if they have no Prisma migration history and are missing only the known 1.0 shelf-browser columns. See `docs/dockge-setup.md`; keep `ALLOW_LEGACY_DATABASE_UPGRADE=false` unless performing that documented one-time repair.
+
 ## DockerHub image
 
-The living-room bookshelf browser image is published at:
+The release image is published at:
 
 ```bash
+docker pull jbenzaquen/cozy-library:1.0.2
 docker pull jbenzaquen/cozy-library:latest
+docker pull jbenzaquen/cozy-library:main
 ```
 
-Published stage-specific test tags include:
-
-```bash
-docker pull jbenzaquen/cozy-library:stage22-regression
-```
-
-Last recorded pushed digest for `latest`, `stage22-regression`, `stage21-polish`, `stage20-living-room`, and `nas-house-test` from the Stage 22 publish:
+Current pushed digest (updated after release pushes):
 
 ```txt
-sha256:cb0a6e80abc6ac4839981326379c70626b1ad9e13f485916ec6df781aceb0900
+sha256:e19e6fdda3184cb3ff5104dea87b9055b688352a01eaad48970e11372e6092d5
 ```
 
-Stage 28 has been validated as a local Docker Compose build. Push a new image and record its digest before treating DockerHub `latest` as a Stage 28 release artifact.
-
-Demo catalog data is opt-in. By default, Docker Compose uses `DEMO_CATALOG_MODE=skip`, which never adds demo books. Supported modes are:
+Demo catalog data is opt-in. By default, Docker Compose uses `DEMO_CATALOG=false`, which never adds demo books. Set `DEMO_CATALOG=true` for demo installs. Advanced `DEMO_CATALOG_MODE` values are:
 
 - `skip`: do not create, reseed, or clear demo books.
 - `ensure`: add the removable demo catalog only when those demo books are missing.
@@ -83,7 +87,7 @@ The main app screen and `/house/3d` now open the living-room bookshelf browser. 
 
 The catalog search is intentionally optimized for private home libraries, not a public multi-user index. It fetches matching catalog data into the app process for ranking polish, then renders results through a `Load more` pattern of 24 books at a time. This is expected to be comfortable for hundreds to a few thousand books on a local Docker or development install. If the library grows into the tens of thousands of books, move coarse search/filtering into PostgreSQL full-text or trigram indexes before relying on it as a daily workflow.
 
-Import/export backup flows are intentionally deferred and hidden from primary navigation. Until those tools are implemented, use database-level backups before large catalog changes. For Docker Compose, a simple backup path is `pg_dump` against the `postgres` service or a copy of the `postgres-data` volume while the stack is stopped.
+Import/export backup flows are intentionally deferred and hidden from primary navigation. Until those tools are implemented, use database-level backups or the CSV CLI before large catalog changes. For Docker Compose, a simple backup path is `pg_dump` against the `postgres` service or a copy of the `postgres-data` volume while the stack is stopped. CSV scripts are available as `npm run inventory:export:csv -- path/to/books.csv` and `npm run inventory:import:csv -- path/to/books.csv`.
 
 To stop the stack while keeping data:
 
@@ -120,4 +124,18 @@ npm run test
 
 ## Stage status
 
-Current work has completed Stage 28: catalog scale, import/export, and release cleanup.
+Stages 33–38 (pre-1.0 polish from `docs/pre-1.0-todo-plan.md`) are complete. The app is ready for 1.0.
+
+## 1.0 living-room bookshelf features
+
+- **Onboarding:** First-visit welcome card, help card, and mobile swipe hint explain the interaction model.
+- **Copy:** Cottage-core language throughout — "Your bookcases," "Books waiting for a home," "Settle here," "Take a closer look."
+- **Mobile/touch:** Bottom-sheet shelf switcher, 44px+ tap targets, swipe navigation, touch-friendly move controls.
+- **Book/shelf visuals:** Book spines with caps, page edges, gold-foil text, wood-grain shelves, deterministic tilt — all CSS-only.
+- **Sounds:** Local `.wav` samples (paper rustle, shelf slide, book settle, close, hearth hum) with oscillator fallback; no external audio dependency.
+- **Settings:** Cozy sound/ambience/volume controls unified across the shelf viewer popover and `/settings` page.
+- **No old 3D runtime:** The app builds and runs without Three.js, React Three Fiber, or GLB assets.
+
+## Local sounds
+
+Interaction sounds and the optional ambient loop are procedurally generated and live in `public/sounds/`. They are under 145 KB total, require no external attribution, and work fully offline.

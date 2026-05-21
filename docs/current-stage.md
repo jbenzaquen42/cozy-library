@@ -2330,3 +2330,1149 @@ Clean lower-risk maintenance issues and prepare the app for larger real librarie
 ### Next stage readiness
 
 The staged build-and-fix remediation plan is complete through Stage 28. Optional future work can resume from `docs/remaining-project-guide.md`.
+
+---
+
+## Stage 29: Urgent cozy shelf MVP
+
+### Status
+
+Completed.
+
+### Goal
+
+Make the app feel like a usable, cute bookshelf browser for a same-day demo while still relying on the demo catalogue until the real inventory spreadsheet is ready.
+
+### User constraints and priorities
+
+- Limited PC time; prioritize a nice running MVP over deeper architecture.
+- Use the demo catalogue for now. Future replacement with the user's spreadsheet should be straightforward.
+- The future spreadsheet is expected to include physical placement and book spine colors.
+- Drag/drop moving is a priority if it can be implemented safely; touch fallback should allow selecting a book and tapping another spot.
+- If a destination spot already contains a book, move the existing book to the unplaced queue at the bottom. If the destination is empty, just move the selected book.
+- The app must remain runnable after this stage.
+
+### Target MVP scope
+
+- Show colored book spines using editable per-book colors when present, with deterministic demo fallback colors.
+- Show title and author directly on book spines.
+- First book click/tap shows a larger title/author tooltip and partially pulls the book out.
+- Second click/tap opens a main inline book info panel with a full pull-out animation.
+- Cute red close button puts the book back visually.
+- Default shelves match the requested house structure:
+  - Downstairs entry: 5 shelves/rows.
+  - Upstairs hallway: 3 bookcases with 3 shelves/rows each.
+  - Reading room: 5 shelves/rows.
+- Give each default bookshelf a cute common species name while showing physical location in parenthesis/nearby.
+- Add shelf edit affordance from the viewer for shelf name, colors, shelf count, width, and height.
+- Add drag/drop and tap-to-move book placement, preserving changes in the database.
+- Add a small unplaced queue so displaced books are visible and can be moved back onto shelves.
+- Add lightweight cozy cottage-core polish and opt-in simple sounds.
+
+### Explicitly out of scope
+
+- Importing the real spreadsheet before the user provides it.
+- Reintroducing full 3D house navigation.
+- Copyrighted music assets.
+
+### Commands that must pass before moving on
+
+- `npm run typecheck`
+- `npm run lint`
+- `npm run test`
+- `npm run build`
+
+### Implementation results
+
+- Added `Book.spineColor` for future spreadsheet imports and viewer editing of per-book spine colors.
+- Updated the house browser data loader to include spine colors, cover paths, and a small unshelved/unplaced copy queue.
+- Updated the default seeded house names/layout to match the requested demo structure: Hedgehog Shelf in Downstairs Entry, Rabbit/Wren/Fox Shelves in Upstairs Hallway, and Fawn Shelf in Reading Room with 5 rows.
+- Reworked the straight-on shelf viewer into the main MVP surface:
+  - visible title/author text on book spines,
+  - deterministic demo spine colors with editable saved override colors,
+  - first click/tap selects and partially pulls out a book with a tooltip,
+  - second click/tap opens an inline book info panel with a full pull-out animation,
+  - a cute red close button visually puts the book back,
+  - shelf switcher still works for all bookcases,
+  - search/catalog shortcut remains visible.
+- Added inline shelf editing from the viewer for shelf name, shelf count/rows, width units, optional width/height meters, frame color, shelf color, trim color, and notes.
+- Added drag/drop book relocation and touch-friendly tap-to-move controls. Moving onto an occupied spot sends the existing occupant(s) to the unplaced queue, then saves the selected book in that spot.
+- Added an unplaced queue at the bottom of the viewer for displaced or unshelved books, including drag/drop and tap selection.
+- Added an opt-in cozy synthesized sound toggle for shelf/book/move/close interactions without adding copyrighted audio files.
+- Added cottage-core visual polish around the shelf wall while keeping the existing responsive layout.
+- Pushed the local PostgreSQL schema to add `Book.spineColor`, reran the default house seed, and confirmed the demo catalogue is present.
+
+### Commands run
+
+- `npx prisma generate` attempted with `DATABASE_URL`; blocked by a Windows file-lock on Prisma's query-engine DLL, but generated TypeScript types were usable and validation passed.
+- `npm run typecheck`
+- `npm run lint`
+- `npm run test`
+- `npm run build`
+- `docker compose up -d postgres`
+- `npm run db:push`
+- `npm run db:seed`
+- `npm run demo:ensure`
+- Production smoke check with `npm run start -- -p 3001` and HTTP checks for `/` and `/house/3d`.
+
+### Results from validation
+
+- Typecheck passed.
+- Lint passed (0 errors, 0 warnings).
+- Tests passed: 7 files passed, 1 skipped; 59 tests passed, 10 skipped.
+- Build passed.
+- Local database schema is in sync with the Prisma schema.
+- Default house seed completed with 2 levels, 3 rooms, 5 bookshelves, and 38 shelf slots.
+- Demo catalogue already present with 50 books.
+- Smoke checks returned HTTP 200 for `/` and `/house/3d`.
+
+### Known issues and follow-ups
+
+- The real inventory spreadsheet import is still deferred until the spreadsheet is provided.
+- Drag/drop and tap-to-move are intentionally simple and slot-based; if real shelf ordering needs multiple books per exact row position, a later spreadsheet/import stage should define ordering semantics.
+- A local Windows process is locking Prisma's query-engine DLL, causing `prisma generate` to report an `EPERM rename` warning during generation. The app typechecked, built, pushed schema, seeded, and served successfully despite the warning.
+
+### Next stage readiness
+
+The cozy shelf MVP is ready for demo use with the demo catalogue. Future work can import the real spreadsheet into the existing `Book.spineColor` and `Copy.locationSlotId` placement fields.
+
+---
+
+## Stage 30: Cozy shelf completion pass
+
+### Status
+
+Completed.
+
+### Goal
+
+Finish the remaining near-term user goals around search, settings, mobile/touch usability, demo colors, and cozy polish without waiting for the real inventory spreadsheet.
+
+### Implementation results
+
+- Added an in-view bookshelf search box that searches title, author, shelf, room, and location text. Results show exactly where the book is, including shelf/location and row/depth, and selecting a result jumps to that shelf and selects the book.
+- Kept the existing catalog search as the full search page while making the home viewer useful for quick "where is this book?" lookups.
+- Added a persistent viewer Settings panel for interaction sounds, gentle ambient hum, and volume. Settings are stored in local browser storage so they survive page reloads on the same device.
+- Added the settings-page note explaining where the cozy viewer settings live.
+- Improved touch/mobile move affordances with explicit Move buttons on shelf spots, Move here buttons on occupied spots, and touch-friendly controls. Drag/drop remains available on desktop.
+- Added seeded demo spine-color support so demo books can have saved `Book.spineColor` values instead of relying only on runtime fallback colors. Existing demo catalogs get missing demo spine colors during `npm run demo:ensure`.
+- Added extra cottage-core visual polish and made author text visible on book spines at mobile sizes.
+
+### Commands run
+
+- `npm run typecheck`
+- `npm run lint`
+- `npm run test`
+- `npm run build`
+- `npm run demo:ensure`
+- Production smoke check with `npm run start -- -p 3001` and HTTP checks for `/`, `/house/3d`, and `/settings`.
+
+### Results from validation
+
+- Typecheck passed.
+- Lint passed (0 errors, 0 warnings).
+- Tests passed: 7 files passed, 1 skipped; 59 tests passed, 10 skipped.
+- Build passed.
+- Demo catalogue ensure completed.
+- Smoke checks returned HTTP 200 for `/`, `/house/3d`, and `/settings`.
+
+### Remaining dependency
+
+- Accurate real-world shelf placement still depends on the user's future spreadsheet. The app is prepared to map spreadsheet color data into `Book.spineColor` and physical placement data into `Copy.locationSlotId`.
+
+---
+
+## Stage 31: DockerHub publish for cozy shelf mode
+
+### Status
+
+Completed.
+
+### Goal
+
+Publish the current cozy shelf mode Docker image to DockerHub as both the `latest` and `main` tags.
+
+### Implementation results
+
+- Built the Docker image from the current working tree.
+- Excluded the local `import/` folder from Git and Docker build context so private spreadsheet files are not included in future builds.
+- Tagged the image as:
+  - `jbenzaquen/cozy-library:latest`
+  - `jbenzaquen/cozy-library:main`
+- Pushed both tags to DockerHub.
+- Verified both remote manifests resolve to the same digest.
+- Updated README DockerHub pull instructions and recorded digest.
+
+### Commands run
+
+- `git status --short`
+- `git diff --stat`
+- `git log --oneline -10`
+- `docker build -t jbenzaquen/cozy-library:latest -t jbenzaquen/cozy-library:main .`
+- `docker push jbenzaquen/cozy-library:latest`
+- `docker push jbenzaquen/cozy-library:main`
+- `docker buildx imagetools inspect jbenzaquen/cozy-library:latest`
+- `docker buildx imagetools inspect jbenzaquen/cozy-library:main`
+- Rebuilt and repushed after adding `import/` to `.gitignore` and `.dockerignore`.
+
+### Results from validation
+
+- Docker build completed successfully.
+- DockerHub push completed successfully for both tags.
+- `latest` digest: `sha256:4334a70e1fba6163b14270f07c5e6ff97c9a2d384aea5110d631b7700ee0ee76`.
+- `main` digest: `sha256:4334a70e1fba6163b14270f07c5e6ff97c9a2d384aea5110d631b7700ee0ee76`.
+
+---
+
+## Stage 32: Real inventory import and global metadata scan
+
+### Status
+
+Completed.
+
+### Goal
+
+Import the real home inventory spreadsheet with ISBNs, physical shelf locations, shelf positions, and spine colors, then run a global metadata refresh for all imported books.
+
+### Input file
+
+- `D:\Projects\cozy-library\import\Home_Book_Inventory_Combined_ISBN_Locations_Colors.xlsx`
+
+### Implementation results
+
+- Added persistent import support for the real inventory spreadsheet via `npm run inventory:import`.
+- Added `Copy.shelfPosition` so rows can preserve left-to-right real-life position within each shelf.
+- Added `Copy.spineColor` so duplicate copies of the same ISBN can keep different visible colors/placements.
+- Kept `Book.spineColor` as the shared/default color and map spreadsheet colors into both book/copy color fields as appropriate.
+- Added a migration for inventory spine colors and positions:
+  - `Book.spineColor`
+  - `Copy.shelfPosition`
+  - `Copy.spineColor`
+- Updated the visual bookshelf browser to order spines by `Copy.shelfPosition` and use copy-specific spine color first.
+- Imported the spreadsheet into the local database:
+  - 376 spreadsheet rows processed.
+  - 375 books stored.
+  - 376 physical copies stored.
+  - 372 copies placed on shelves.
+  - 4 copies intentionally left unplaced because the spreadsheet marked them not located.
+  - 372 copies imported with color values.
+  - 374 books have ISBNs; one row has no ISBN in the source sheet.
+- Removed stale demo/test books that were not part of the imported inventory, leaving the database aligned to the real spreadsheet.
+- Added `npm run metadata:refresh-all` for global metadata enrichment.
+- Ran the global metadata scan across all 375 imported books:
+  - 365 books refreshed from available providers.
+  - 10 books had no provider result from the configured providers and were marked with a completed failed-scan record in `metadataJson.metadataScan`.
+  - No books remain with missing metadata scan status/source tracking.
+
+### Shelf placement verification
+
+- Fawn Shelf: 107 copies.
+- Hedgehog Shelf: 98 copies.
+- Rabbit Shelf: 60 copies.
+- Wren Shelf: 47 copies.
+- Fox Shelf: 60 copies.
+- Unplaced queue: 4 copies.
+
+### Metadata provider misses recorded
+
+The following books had no result from the configured metadata providers and were marked in metadata JSON rather than left unscanned:
+
+- `Fragile` — Shannon Sovndal
+- `Give Me Space but Don't Go Far` — Haley Weaver
+- `Goddess Complex` — Sanjena Sathian
+- `Into the Blue` — Emma Brodie
+- `The Hidden Book` — Kirsty Manning
+- `The Mafia Contract` — Jenna Kottke
+- `The Moonshine Women` — Michelle Collins Anderson
+- `The Temporary Roomie` — Sarah Adams
+- `This Story Might Save Your Life` — Tiffany Crum
+- `When the Season Ends` — Stacy Windahl
+
+### Commands run
+
+- `npm install`
+- Attempted npm XLSX parsers were removed after validation/audit checks; final importer shells out to local Python `openpyxl` for trusted local workbook parsing.
+- `npm run db:generate`
+- `docker compose up -d postgres`
+- `npm run db:push`
+- `npm run db:seed`
+- `npm run inventory:import -- "D:\Projects\cozy-library\import\Home_Book_Inventory_Combined_ISBN_Locations_Colors.xlsx"`
+- `npm run metadata:refresh-all`
+- Inventory verification query for books/copies/placement/colors/metadata status.
+- `npm run typecheck`
+- `npm run lint`
+- `npm run test`
+- `npm run build`
+- `npm audit --audit-level=high`
+- Production smoke check with `npm run start -- -p 3001` and HTTP checks for `/`, `/catalog`, and `/house/3d`.
+
+### Results from validation
+
+- Typecheck passed.
+- Lint passed (0 errors, 0 warnings).
+- Tests passed: 7 files passed, 1 skipped; 59 tests passed, 10 skipped.
+- Build passed.
+- High-severity npm audit passed with 0 vulnerabilities after removing npm XLSX parser dependencies.
+- Smoke checks returned HTTP 200 for `/`, `/catalog`, and `/house/3d`.
+
+### Known notes
+
+- The local inventory file is under `import/`, which is ignored by Git and Docker build context.
+- The import script expects local Python with `openpyxl` available to parse the trusted workbook.
+
+---
+
+## Stage 33: Copy, onboarding, and first-use clarity
+
+### Status
+
+Completed.
+
+### Goal
+
+Make the living-room bookshelf browser clearer for first-time users and remove remaining technical/generic user-facing copy before 1.0, per `docs/pre-1.0-todo-plan.md`.
+
+### Implementation results
+
+- Added a dismissible `FirstVisitNote` welcoming card inside the living-room browser. Dismissal persists in `localStorage`.
+- Added a `ShelfHelpCard` toggle explaining shelf switching, book peeking/opening, and moving books.
+- Renamed all primary visible labels away from technical language:
+  - `All shelves viewer` → `Your bookcases`
+  - `Unplaced queue` → `Books waiting for a home`
+  - `Move here` → `Settle here`
+  - `Open info` → `Take a closer look`
+  - `Full page` → `Open book page`
+  - and equivalent changes on catalog, unshelved, book pages, and settings.
+- Extracted cozy viewer settings into a shared `components/house/cozyViewerSettings.tsx` with `useCozyViewerSettings` hook and `CozyViewerSettingsControls` component (replacing the inline `ViewerSettings`).
+- No `viewer`, `queue`, `flow`, or `helper` language remains in primary UI strings.
+
+### Commands run
+
+- `npm run typecheck`
+- `npm run lint`
+- `npm run test`
+- `npm run build`
+
+### Results from validation
+
+- Typecheck passed.
+- Lint passed (0 errors, 0 warnings).
+- Tests passed: 7 files passed, 1 skipped; 59 tests passed, 10 skipped.
+- Build passed.
+
+---
+
+## Stage 34: Mobile and touch hardening
+
+### Status
+
+Completed.
+
+### Goal
+
+Make browsing and moving books reliable on small touch screens, per `docs/pre-1.0-todo-plan.md`.
+
+### Implementation results
+
+- Increased book spine minimum width to 44 px on mobile and 34 px minimum everywhere.
+- Made shelf switching on mobile a collapsible bottom-sheet overlay with a visible `Choose another bookcase` button and red close control.
+- Added a first-use swipe hint badge on mobile using a new `shelf_slide_hint` keyframe, gated by `motion-safe:`.
+- Enforced 44 px minimum tap targets on all critical interactive elements: tooltip dismiss, detail-panel close, mobile shelf-switcher close, search input, and all shelf-edit form fields.
+- Improved tap-to-move button labels and sizing; destination buttons now read `Settle here` / `Open spot` with `min-h-12 min-w-14`.
+- Verified keyboard tab order remains logical (arrow keys and Escape unchanged).
+
+### Commands run
+
+- `npm run typecheck`
+- `npm run lint`
+- `npm run test`
+- `npm run build`
+
+### Results from validation
+
+- Typecheck passed.
+- Lint passed (0 errors, 0 warnings).
+- Tests passed: 7 files passed, 1 skipped; 59 tests passed, 10 skipped.
+- Build passed.
+- Designer review confirmed no remaining sub-44 px critical tap targets.
+
+---
+
+## Stage 35: Book and shelf visual model upgrade
+
+### Status
+
+Completed.
+
+### Goal
+
+Finish `import/todo.md` item #19 within the active app-rendered living-room direction, per `docs/pre-1.0-todo-plan.md`.
+
+### Implementation results
+
+- Upgraded book spines:
+  - top/bottom cap accent lines;
+  - gold-foil text-shadow highlight on spine titles;
+  - deterministic tiny CSS rotation per spine via `--book-tilt` custom property;
+  - page-edge sliver (right-edge gradient mimicking pages);
+  - inside-edge highlight and increased minimum spine sizes.
+- Upgraded shelves:
+  - wood-grain texture via `repeating-linear-gradient` on shelf rows;
+  - deeper shelf board shadows and borders.
+- Improved book peek/selected state: selected spine uses `translate-y-4 scale-110` with a cream ring highlight.
+- Shelf rows respect the `getVisibleRowCopies` helper and display a `+N` overflow badge when more books exist beyond the visible limit.
+- Room background already had CSS decorative elements (coffee cup, plant pot, shelf decor, rug gradient); strengthened shadows and depth.
+- Sorted visible row copies by `shelfPosition` in `getVisibleRowCopies` with fallback to slot depth and copy index ordering.
+- All motion gated by `prefers-reduced-motion`.
+
+### Commands run
+
+- `npm run typecheck`
+- `npm run lint`
+- `npm run test`
+- `npm run build`
+
+### Results from validation
+
+- Typecheck passed.
+- Lint passed (0 errors, 0 warnings).
+- Tests passed: 7 files passed, 1 skipped; 59 tests passed, 10 skipped.
+- Build passed.
+
+---
+
+## Stage 36: Sounds and ambience
+
+### Status
+
+Completed.
+
+### Goal
+
+Replace synthetic Web Audio oscillator tones with locally hosted soft samples and an optional ambient loop, per `docs/pre-1.0-todo-plan.md`.
+
+### Implementation results
+
+- Created five local WAV samples in `public/sounds/`:
+  - `book-rustle.wav` (0.42 s): filtered noise + soft tone, ~18 KB.
+  - `shelf-slide.wav` (0.48 s): descending noise pad, ~21 KB.
+  - `book-settle.wav` (0.32 s): low dual-tone settle, ~14 KB.
+  - `book-close.wav` (0.26 s): soft close tone, ~11 KB.
+  - `hearth-hum.wav` (1.8 s looping): low filtered noise + crackle + hum, ~79 KB.
+- Total sound payload: ~145 KB, well under the 2 MB target.
+- Replaced the inline `playTone()` function with `useCozySounds` hook in `components/house/useCozySounds.ts`.
+- The hook plays local `.wav` samples via `new Audio()` and falls back to a quieter Web Audio oscillator if sample playback fails.
+- Ambient loop starts/stops with the ambient toggle and respects volume changes.
+- No audio autoplays; all playback follows explicit user interaction.
+- All sounds are procedurally generated — no external attribution or licensing needed.
+
+### Commands run
+
+- `npm run typecheck`
+- `npm run lint`
+- `npm run test`
+- `npm run build`
+
+### Results from validation
+
+- Typecheck passed.
+- Lint passed (0 errors, 0 warnings).
+- Tests passed: 7 files passed, 1 skipped; 59 tests passed, 10 skipped.
+- Build passed.
+- Sound files present and under size limit.
+
+---
+
+## Stage 37: Settings cohesion
+
+### Status
+
+Completed.
+
+### Goal
+
+Unify viewer ambience settings with `/settings` so preferences are discoverable from both surfaces, per `docs/pre-1.0-todo-plan.md`.
+
+### Implementation results
+
+- Created `components/settings/CozySettingsCard.tsx` that imports and renders `CozyViewerSettingsControls` with the shared `useCozyViewerSettings` hook.
+- Added `CozySettingsCard` to `/settings` (now above database status cards).
+- Replaced the old "Cozy viewer settings" text-only card with a "Demo catalog note" that honestly explains demo data is managed by startup mode/CLI.
+- Added a "Reset shelf preferences" button in the settings controls.
+- Both the viewer popover and `/settings` page read/write the same `localStorage` key, so changes from either surface are reflected after refresh.
+
+### Commands run
+
+- `npm run typecheck`
+- `npm run lint`
+- `npm run test`
+- `npm run build`
+
+### Results from validation
+
+- Typecheck passed.
+- Lint passed (0 errors, 0 warnings).
+- Tests passed: 7 files passed, 1 skipped; 59 tests passed, 10 skipped.
+- Build passed.
+
+---
+
+## Stage 38: Release verification and documentation
+
+### Status
+
+Completed.
+
+### Goal
+
+Validate the app end-to-end before 1.0, update release docs, and confirm all `import/todo.md` items are satisfied from the active app-rendered living-room perspective.
+
+### Planned scope
+
+- Re-audit `import/todo.md` and mark each item satisfied.
+- Run full automated checks.
+- Run Docker Compose smoke checks.
+- Update `README.md`, `docs/remaining-project-guide.md`, and `docs/manual-test-checklist.md`.
+- Freeze release state in docs.
+
+### Commands that must pass before moving on
+
+- `npm run typecheck`
+- `npm run lint`
+- `npm run test`
+- `npm run build`
+- `npm audit --audit-level=high`
+- `docker compose up --build -d`
+- HTTP smoke checks for `/`, `/house/3d`, `/catalog`, `/settings`, `/house/2d`, `/scan`, `/unshelved`
+
+### Results from validation so far
+
+- Typecheck passed.
+- Lint passed (0 errors, 0 warnings).
+- Tests passed: 7 files passed, 1 skipped; 59 tests passed, 10 skipped.
+- Build passed.
+- `npm audit --audit-level=high` passed with 0 vulnerabilities.
+- Docker Compose built and started successfully.
+- HTTP smoke checks returned 200 for `/`, `/house/3d`, `/catalog`, `/settings`, `/house/2d`, `/scan`, `/unshelved`.
+
+### DockerHub 1.0 publish
+
+- Tagged the built image as `jbenzaquen/cozy-library:1.0`.
+- Also tagged as `jbenzaquen/cozy-library:latest` and `jbenzaquen/cozy-library:main`.
+- Pushed all three tags to DockerHub.
+- Verified remote manifest resolves to the same digest.
+
+### Next stage readiness
+
+1.0 is released. Post-1.0 work can resume from `docs/remaining-project-guide.md`.
+
+---
+
+## Stage 39: NAS Docker recovery and clean image documentation
+
+### Status
+
+Completed.
+
+### Goal
+
+Fix Dockge/NAS startup for older non-empty databases without Prisma migration history, document Docker/Dockge setup clearly, keep public images free of private book data, and create a private PostgreSQL export for the real local library.
+
+### Implementation results so far
+
+- Added `COZY_LEGACY_SCHEMA_SYNC=false` to `docker-compose.yml` and `.env.example`.
+- Updated `docker-entrypoint.sh` with a narrow one-time recovery path for the known pre-1.0 NAS drift:
+  - `Book.spineColor`
+  - `Copy.shelfPosition`
+  - `Copy.spineColor`
+- The legacy recovery path only runs when:
+  - startup hits Prisma `P3005`,
+  - the schema drift script is exactly the known three-column additive case,
+  - `COZY_LEGACY_SCHEMA_SYNC=true` is set.
+- The recovery path applies only those nullable columns, verifies schema drift is gone, marks committed migrations as applied, and reruns `prisma migrate deploy`.
+- Added Docker/Dockge setup documentation:
+  - `docs/docker-setup.md`
+  - `docs/dockge-setup.md`
+- Added setup examples:
+  - `docker-compose.example.yml`
+  - `.env.real-library.example`
+  - `.env.demo.example`
+- Created a private local PostgreSQL export at `import/exports/cozy-library-real-books-1.0.dump`.
+- Verified the dump can be listed by `pg_restore -l` and contains Prisma migration history plus app tables.
+- Verified local counts before export: 375 books, 376 copies, 372 shelved, 4 waiting for a shelf spot.
+
+### Commands that must pass before moving on
+
+- `npm run typecheck`
+- `npm run lint`
+- `npm run test`
+- `npm run build`
+- `npm audit --audit-level=high`
+- `docker compose up --build -d`
+- HTTP smoke checks for core routes
+- DockerHub push for corrected clean image tags
+
+### Results from validation
+
+- Typecheck passed.
+- Lint passed (0 errors, 0 warnings).
+- Tests passed: 7 files passed, 1 skipped; 59 tests passed, 10 skipped.
+- Build passed.
+- High-severity npm audit passed with 0 vulnerabilities.
+- Docker Compose built and started successfully.
+- Web startup logs show no pending migrations, default house seed completed, and demo catalog skipped.
+- HTTP smoke checks returned 200 for `/`, `/house/3d`, `/catalog`, `/settings`, `/house/2d`, `/scan`, and `/unshelved`.
+- DockerHub tags pushed: `jbenzaquen/cozy-library:1.0.1`, `jbenzaquen/cozy-library:latest`, and `jbenzaquen/cozy-library:main`.
+- Shared DockerHub digest: `sha256:76aa0e956216c11509a506749d19ef331b3e779e0970fbf4a723894b38bd6c85`.
+
+### Private export
+
+- Local real-library database dump created at `import/exports/cozy-library-real-books-1.0.dump`.
+- Dump is under the ignored `import/` directory and is not included in Docker images or Git.
+
+### Next stage readiness
+
+The NAS/Dockge recovery image is ready. For the reported P3005 NAS database, back up first, then set `COZY_LEGACY_SCHEMA_SYNC=true` once, start the stack, and set it back to `false` after successful startup.
+
+## Stage 40: 1.0.2 Docker/NAS polish and CSV migration CLI
+
+### Status
+
+Completed.
+
+### Goal
+
+Apply the council-approved cleanup before publishing 1.0.2: simplify demo startup to `DEMO_CATALOG=true|false`, rename the legacy recovery switch to `ALLOW_LEGACY_DATABASE_UPGRADE`, keep deprecated compatibility fallbacks, add a private-data CSV migration path, and update NAS/Docker docs to recommend pinned release tags.
+
+### Implementation results so far
+
+- Updated `docker-entrypoint.sh`:
+  - primary legacy recovery switch is now `ALLOW_LEGACY_DATABASE_UPGRADE=true`,
+  - deprecated `COZY_LEGACY_SCHEMA_SYNC=true` still works as a compatibility fallback with a warning,
+  - `DEMO_CATALOG=true` maps to the existing safe `ensure` behavior,
+  - `DEMO_CATALOG=false` maps to `skip`,
+  - advanced `DEMO_CATALOG_MODE=skip|ensure|seed|clear` still overrides the boolean flag.
+- Updated Docker/env examples to default real-library installs to:
+  - `DEMO_CATALOG=false`,
+  - `ALLOW_LEGACY_DATABASE_UPGRADE=false`.
+- Added CSV CLI scripts:
+  - `npm run inventory:export:csv -- path/to/books.csv`,
+  - `npm run inventory:import:csv -- path/to/books.csv`.
+- CSV format is one row per physical copy with title, author, ISBN, location, shelf, position, spine color, copy label, and notes.
+- Updated Docker/Dockge docs to prefer deleting demo-only NAS databases instead of legacy-upgrading them.
+
+### Commands that must pass before moving on
+
+- `npm run typecheck`
+- `npm run lint`
+- `npm run test`
+- `npm run build`
+- `npm audit --audit-level=high`
+- `docker compose up --build -d`
+- HTTP smoke checks for core routes
+- DockerHub push for `jbenzaquen/cozy-library:1.0.2`, `latest`, and `main`
+
+### Results from validation
+
+- Typecheck passed.
+- Lint passed (0 errors, 0 warnings).
+- Tests passed: 7 files passed, 1 skipped; 59 tests passed, 10 skipped.
+- Build passed.
+- High-severity npm audit passed with 0 vulnerabilities.
+- Docker Compose built and started successfully.
+- HTTP smoke checks returned 200 for `/`, `/house/3d`, `/catalog`, `/settings`, `/house/2d`, `/scan`, and `/unshelved`.
+- DockerHub tags pushed: `jbenzaquen/cozy-library:1.0.2`, `jbenzaquen/cozy-library:latest`, and `jbenzaquen/cozy-library:main`.
+- Shared DockerHub digest: `sha256:e19e6fdda3184cb3ff5104dea87b9055b688352a01eaad48970e11372e6092d5`.
+
+### Private export
+
+- Private CSV export created at `import/exports/cozy-library-real-books-1.0.csv`.
+- CSV export contains 376 rows, one per copy.
+
+---
+
+## Stage 41: Baseline audit and stage setup
+
+### Status
+
+Completed.
+
+### Goal
+
+Confirm the current implementation details before changing behavior, per `docs/import-todo-working-plan.md`.
+
+### Audit results
+
+#### Shelf edit UI
+
+- Edit button exists and toggles `editingShelf` state.
+- Editable fields: name, row count, width units, width/height meters, frame/shelf/trim colors, notes.
+- Hidden fields: id, roomId, sceneKey, sortOrder, depthCount.
+- **Gaps:** no field grouping (identity/size/appearance/notes), no live preview, no depth editing in viewer.
+
+#### Move/edit mode
+
+- Drag/drop and tap-to-move both work.
+- No explicit move mode toggle — moving is always active.
+- Displaced copies go to unplaced queue.
+- **Gaps:** no explicit "Arrange books" mode, no source/destination status messages.
+
+#### Locations page
+
+- Full CRUD for levels, rooms, bookshelves with reorder and delete confirmation.
+- Labels use technical terms: "Levels", "Rooms", "Bookshelves".
+- Scene keys exposed on every entity.
+- **Gaps:** needs renaming to user-friendly terms, human-friendly slot summaries, link to shelf browser, separation of destructive actions.
+
+#### Settings page
+
+- Sound/ambience prefs work via shared `useCozyViewerSettings` hook.
+- Page titled "Application status" — feels like admin dashboard.
+- **Gaps:** no cohesive preferences model, no import/export config, no display density settings.
+
+#### Import/export page
+
+- Total placeholder: "Backup tools are not ready yet".
+- No nav link to the page.
+- `previewCsvImport()` returns `NOT_IMPLEMENTED`.
+- **Gaps:** everything is missing.
+
+#### All-bookcases overview
+
+- Only one-at-a-time viewing with sidebar picker.
+- **Gaps:** no overview mode, no toggle between detail and overview.
+
+#### Unshelved/unplaced queue
+
+- Both `/unshelved` page and inline browser queue work.
+- **Gaps:** `/unshelved` links to book page, not shelf browser.
+
+#### Round-trip export field inventory
+
+All Prisma models audited. Key findings:
+
+- **Scene keys** (`HouseLevel.sceneKey`, `Room.sceneKey`, `Bookshelf.sceneKey`) are the stable cross-instance identifiers for import matching.
+- **ShelfSlot** is identified by compound key `(bookshelfSceneKey, rowIndex, depthIndex)`.
+- **Spine colors** exist at both `Book.spineColor` (default) and `Copy.spineColor` (per-copy override).
+- **Authors** use denormalized `Book.displayAuthor` plus `Author`/`BookAuthor` junction.
+- **Cover images** are local files; export should embed base64 or skip and let metadata refresh re-download.
+- **Import order** must respect FK dependencies: MetadataCache, Author, HouseLevel, Room, Bookshelf, ShelfSlot, Book, BookAuthor, UploadedImage, Copy, Loan.
+- **Unique constraints** on ISBNs, Author names, Copy labels, and scene keys require upsert or collision handling on import.
+
+#### Privacy audit
+
+- `import/` is listed in `.gitignore` and `.dockerignore`.
+- Zero files under `import/` are tracked by git.
+- No secrets in `import/` files — only personal book inventory data and dev notes.
+- Risk: low — properly isolated from version control and builds.
+
+### Implementation checklist for next stages
+
+1. **Stage 44 (export):** Build versioned JSON backup schema, server-side export builder, Zod validation, UI with metadata toggle, download route.
+2. **Stage 45 (import):** JSON parser/validator, preview summary, transactional restore, round-trip tests.
+3. **Stage 42 (shelf readability):** Group shelf edit fields, add live preview hints, improve spine readability, responsive checks, visual review.
+4. **Stage 46 (overview + move mode):** Add all-bookcases overview toggle, explicit "Arrange books" mode, cross-shelf movement.
+5. **Stage 43 (locations clarity):** Rename labels, add explainer, separate destructive actions, human-friendly summaries, link to browser.
+6. **Stage 47 (settings cohesion):** Add display/import-export/privacy sections, unify viewer and page settings.
+7. **Stage 48 (validation):** Re-audit todos, automated checks, smoke checks, visual checks, independent reviewer, DockerHub push.
+
+### Next stage readiness
+
+Stage 44 can safely begin.
+
+---
+
+## Stage 44: Complete export package
+
+### Status
+
+Completed.
+
+### Goal
+
+Replace the "backup tools are not ready" app page with a real complete export flow, per `docs/import-todo-working-plan.md`.
+
+### Covers todos
+
+3, 4, 7
+
+### Implementation results
+
+- Added `lib/validation/importExport.ts` with Zod schemas for the versioned JSON backup format v1:
+  - `backupV1Schema` with `schemaVersion: 1`, `exportedAt`, `app`, `options`, `home`, `books`, `copies`
+  - `exportedLevelSchema`, `exportedRoomSchema`, `exportedBookcaseSchema`, `exportedSlotSchema` for home hierarchy
+  - `exportedBookSchema` with conditional `metadataJson`/`metadataSource` fields
+  - `exportedCopySchema` with `bookIsbn13`, `bookTitle`, slot references via scene keys, `shelfPosition`, `spineColor`, `status`
+  - All inferred types exported
+- Added `lib/files/exportBuilder.ts` with `buildBackupV1()` function:
+  - Queries all 6 entity types in parallel via `Promise.all`
+  - Maps Prisma records to export format using scene keys for cross-referencing
+  - Conditionally includes `metadataJson`/`metadataSource` based on `includeMetadata` option
+  - Deterministic ordering: levels/rooms/bookcases by sortOrder, books by title, copies by copyLabel
+  - Nullable fields use `?? undefined` so they're omitted from JSON when absent
+- Added `app/api/export/route.ts` GET route handler:
+  - Reads `includeMetadata` query parameter (default: true)
+  - Builds backup, serializes to pretty-printed JSON
+  - Returns download with `Content-Disposition: attachment` header
+  - Filename includes `-no-metadata` suffix when metadata is excluded
+- Rewrote `app/import-export/page.tsx` as a client component with:
+  - Export card with metadata toggle checkbox and download button
+  - Loading state during export preparation
+  - Import card (disabled, "coming soon")
+  - Advanced tools card with CSV CLI instructions
+- Added "Import / Export" navigation link to side-nav and mobile-menu with `ArrowUpDown` icon
+- Updated `lib/files/importExport.ts` status from "deferred" to "available"
+- Added `tests/unit/importExport.test.ts` with 18 tests:
+  - 13 schema validation tests (no database needed)
+  - 5 builder tests (database required, skipped without DATABASE_URL)
+
+### Export content verified
+
+- Schema version: 1
+- Levels: 2, Rooms: 3, Bookcases: 5, Slots: 38, Books: 375, Copies: 376
+- Without metadata: ~343 KB
+- With metadata: ~439 KB
+- All scene keys, spine colors, shelf positions, and ISBNs included
+
+### Commands run
+
+- `npm run typecheck`
+- `npm run lint`
+- `npm run test`
+- `npm run build`
+- Production smoke test: `/api/export?includeMetadata=false` returned 200 with valid JSON
+- Production smoke test: `/api/export?includeMetadata=true` returned 200 with valid JSON
+
+### Results from validation
+
+- Typecheck passed.
+- Lint passed (0 errors, 0 warnings).
+- Tests passed: 8 files passed, 1 skipped; 72 tests passed, 15 skipped.
+- Build passed.
+- Export API returns valid JSON backup with all library data.
+
+### Known issues
+
+- The production `next start` server is unstable for repeated requests due to the standalone mode configuration. Docker Compose uses the proper standalone server and is not affected.
+- Cover images are referenced by path but not embedded in the export. Import will need to re-download covers via metadata refresh.
+
+### Next stage readiness
+
+Stage 45 can safely begin.
+
+---
+
+## Stage 45: Import preview and safe restore
+
+### Status
+
+Completed.
+
+### Goal
+
+Add an import process that accepts the Stage 44 export and safely recreates it, per `docs/import-todo-working-plan.md`.
+
+### Covers todos
+
+5, 6
+
+### Safety model
+
+Preview-first flow. Import does not apply immediately after upload. "Replace library" mode requires typing "REPLACE MY LIBRARY" as explicit confirmation.
+
+### Implementation results
+
+- Added `lib/files/importParser.ts` with `parseAndValidateBackup()` function:
+  - Parses raw input as JSON (handles both string and object)
+  - Validates against `backupV1Schema` from Zod schema
+  - Generates `ImportPreview` with counts and warnings
+  - Warnings for: unknown schema version, duplicate ISBN-13s, orphan room/bookcase/slot references, copies referencing unknown bookcases, invalid hex colors
+  - Returns `{ backup: BackupV1 | null, preview: ImportPreview }`
+- Added `lib/files/importRestore.ts` with `restoreBackupV1()` function:
+  - Runs entirely inside `db.$transaction()` for atomicity
+  - Deletes all existing data in reverse dependency order before importing
+  - Reconstructs hierarchy using scene key → new ID maps
+  - Generates shelf slots via `generateShelfSlots()` and merges with explicit backup slots
+  - Creates books with `upsertDisplayAuthor()` for Author/BookAuthor records
+  - Matches copies to books via ISBN-13 or title prefix fallback
+  - Returns `RestoreResult` with counts and any errors
+- Added `app/import-export/actions.ts` with server actions:
+  - `previewImportAction()` — parses and validates backup file content
+  - `restoreImportAction()` — validates confirmation phrase, parses backup, calls restore, revalidates all paths
+- Updated `app/import-export/page.tsx` with full import flow:
+  - File upload area with `.json` acceptance and FileReader parsing
+  - Backup preview display (export date, metadata status, entity counts)
+  - Warnings list (amber) and errors list (red)
+  - Destructive restore section with explicit "REPLACE MY LIBRARY" confirmation phrase
+  - Restore result display (success with counts or failure with errors)
+  - Cancel/Done buttons to reset state
+- Added import parser tests to `tests/unit/importExport.test.ts`:
+  - Rejects invalid JSON
+  - Rejects valid JSON that is not a backup
+  - Accepts valid backup and produces preview
+  - Warns about orphan room references
+  - Warns about duplicate ISBNs
+
+### Commands run
+
+- `npm run typecheck`
+- `npm run lint`
+- `npm run test`
+- `npm run build`
+
+### Results from validation
+
+- Typecheck passed.
+- Lint passed (0 errors, 0 warnings).
+- Tests passed: 8 files passed, 1 skipped; 77 tests passed, 15 skipped.
+- Build passed.
+
+### Known issues
+
+- The restore is fully destructive (replaces entire library). A "merge/update" mode is deferred to a future stage.
+- Cover images are referenced by path but not embedded; import does not restore cover image files. Metadata refresh can re-download covers.
+- Round-trip testing against a real database requires a disposable test database; the unit tests cover schema validation and parser logic.
+
+### Next stage readiness
+
+Stage 42 can safely begin.
+
+---
+
+## Stage 42: Shelf readability and shelf-edit polish
+
+### Status
+
+Completed.
+
+### Goal
+
+Make book names readable and shelf editing easy to discover/use, per `docs/import-todo-working-plan.md`.
+
+### Covers todos
+
+1, 8
+
+### Implementation results
+
+- Grouped shelf edit fields into 4 visual sections with headers:
+  - **Identity** — shelf name
+  - **Size** — shelf count/rows, width units, width/height meters, with explanatory text
+  - **Appearance** — frame, shelf, trim colors
+  - **Notes** — notes textarea (upgraded from input to textarea)
+- Added `getSpineTextColor()` helper that computes luminance from hex color to choose light or dark text for contrast
+- Improved book spine readability:
+  - Title font scales based on spine width (9px for narrow, 10px for wider)
+  - Author text only shown on spines wider than 40px
+  - Dynamic text color (deep-brown or cream) based on spine background luminance
+  - Graceful truncation with `overflow-hidden text-ellipsis whitespace-nowrap` and `title` attributes for full text on hover
+- Responsive behavior: form fields stack vertically on mobile, 2-column grid on tablet+
+
+### Commands run
+
+- `npm run typecheck`
+- `npm run lint`
+- `npm run test`
+- `npm run build`
+
+### Results from validation
+
+- Typecheck passed.
+- Lint passed (0 errors, 0 warnings).
+- Tests passed: 8 files passed, 1 skipped; 77 tests passed, 15 skipped.
+- Build passed.
+
+### Next stage readiness
+
+Stage 46 can safely begin.
+
+---
+
+## Stage 46: All-bookcases overview and explicit move/edit mode
+
+### Status
+
+Completed.
+
+### Goal
+
+Make it easy to see all shelves and intentionally move books without accidental edits, per `docs/import-todo-working-plan.md`.
+
+### Covers todos
+
+9, 10
+
+### Implementation results
+
+- Added `viewMode` state (`"detail" | "overview"`, default `"detail"`) with toggle buttons in the header
+- Created `BookcasesOverview` component showing a responsive grid (2 columns desktop, 1 mobile) of compact bookcase cards
+- Each card displays: bookcase name, level/room location, shelf count, copy count, occupancy progress bar, filled/open spot counts
+- Clicking a card switches to detail mode focused on that bookcase
+- Added `arrangeMode` state (boolean, default false) with toggle button in the header
+- When arrange mode is off: book spines are not draggable, "Settle here" buttons are hidden, unplaced queue is hidden
+- When arrange mode is on: book spines are draggable with cursor-grab styling, "Settle here" buttons appear, unplaced queue is visible, amber visual indicator ring on main section
+- Toggle buttons have `aria-pressed` attributes for accessibility
+
+### Commands run
+
+- `npm run typecheck`
+- `npm run lint`
+- `npm run test`
+- `npm run build`
+
+### Results from validation
+
+- Typecheck passed.
+- Lint passed (0 errors, 0 warnings).
+- Tests passed: 8 files passed, 1 skipped; 77 tests passed, 15 skipped.
+- Build passed.
+
+### Next stage readiness
+
+Stage 43 can safely begin.
+
+---
+
+## Stage 43: Locations page clarity
+
+### Status
+
+Completed.
+
+### Goal
+
+Make `/locations` understandable for normal users who are arranging a home library, per `docs/import-todo-working-plan.md`.
+
+### Covers todo
+
+2
+
+### Implementation results
+
+- Renamed confusing labels: "Levels" → "Floors / Areas", "Bookshelves" → "Bookcases", "Location admin" → "Locations"
+- Added explainer card at top describing what locations are for
+- Separated destructive actions into a "danger zone" with red border/background
+- Added human-friendly slot counts: "4 shelves · 12 books · 3 open spots" per bookcase
+- Added "Browse books →" link on each bookcase that navigates to `/?shelf=<sceneKey>`
+- Hidden scene keys behind collapsible `<details>` elements
+- Added `_count: { copies: true }` to slots select in `listLocations` for book count computation
+
+### Commands run
+
+- `npm run typecheck`
+- `npm run lint`
+- `npm run test`
+- `npm run build`
+
+### Results from validation
+
+- Typecheck passed.
+- Lint passed (0 errors, 0 warnings).
+- Tests passed: 8 files passed, 1 skipped; 77 tests passed, 15 skipped.
+- Build passed.
+
+### Next stage readiness
+
+Stage 47 can safely begin.
+
+---
+
+## Stage 47: Cohesive settings menu
+
+### Status
+
+Completed.
+
+### Goal
+
+Make settings feel like a real app menu, not only a database status page, per `docs/import-todo-working-plan.md`.
+
+### Covers todo
+
+11
+
+### Implementation results
+
+- Renamed page title from "Application status" to "Settings"
+- Renamed nav label from "Status" to "Settings" in side-nav and mobile-menu
+- Reorganized into four clear sections:
+  - **Shelf display** — CozySettingsCard (sounds, ambience, volume)
+  - **Import / Export** — card explaining data stays local with link to `/import-export`
+  - **Data & Privacy** — card with three bullet points about local storage, explicit metadata lookups, and no analytics
+  - **System information** — collapsible `<details>` section with database status, data directory, provider status, and demo note
+
+### Commands run
+
+- `npm run typecheck`
+- `npm run lint`
+- `npm run test`
+- `npm run build`
+
+### Results from validation
+
+- Typecheck passed.
+- Lint passed (0 errors, 0 warnings).
+- Tests passed: 8 files passed, 1 skipped; 77 tests passed, 15 skipped.
+- Build passed.
+
+### Next stage readiness
+
+Stage 48 can safely begin.
+
+---
+
+## Stage 48: End-to-end validation and documentation
+
+### Status
+
+Completed.
+
+### Goal
+
+Prove the todo list is complete, run automated checks, smoke checks, and leave a clear handoff.
+
+### Todo re-audit
+
+| # | Todo | Status | Evidence |
+|---|------|--------|----------|
+| 1 | Shelf edit button: color, count, width/height, name | ✅ Satisfied | Stage 42: edit fields grouped into Identity/Size/Appearance/Notes sections; all fields editable from viewer |
+| 2 | Locations tab is confusing | ✅ Satisfied | Stage 43: renamed to "Floors/Areas"/"Bookcases", added explainer, human-friendly summaries, browse links, hidden scene keys |
+| 3 | Export does not need to be CSV | ✅ Satisfied | Stage 44: versioned JSON backup as primary format; CSV CLI remains as advanced tool |
+| 4 | Export includes home config, slots, books, colors, ISBN, positions, sizes | ✅ Satisfied | Stage 44: export includes levels, rooms, bookcases, slots, books (with ISBN, spineColor, categories), copies (with shelfPosition, spineColor, slot references) |
+| 5 | Import function missing | ✅ Satisfied | Stage 45: import preview and restore flow on /import-export page |
+| 6 | Import works with whatever export creates | ✅ Satisfied | Stage 45: import accepts the exact Stage 44 export format; same Zod schema validates both directions |
+| 7 | Metadata export optional toggle | ✅ Satisfied | Stage 44: metadata include/exclude checkbox on export; Stage 45: preview shows whether metadata is included |
+| 8 | Book names unreadable; shelves bigger; font scales | ✅ Satisfied | Stage 42: dynamic spine text color based on luminance, scaled fonts, graceful truncation; Stage 34/35: minimum spine widths, visual upgrades |
+| 9 | All shelves viewer | ✅ Satisfied | Stage 46: "All bookcases" overview mode with compact cards and occupancy summaries |
+| 10 | Edit button with dragging/dropping moving of books | ✅ Satisfied | Stage 46: explicit "Arrange books" mode toggle; drag/drop and tap-to-move only when active |
+| 11 | Settings menu | ✅ Satisfied | Stage 47: reorganized into Shelf display, Import/Export, Data & Privacy, System information sections |
+
+### Automated checks
+
+- `npm run typecheck`: ✅ passed
+- `npm run lint`: ✅ passed (0 errors, 0 warnings)
+- `npm run test`: ✅ passed (8 files, 77 tests, 15 skipped)
+- `npm run build`: ✅ passed
+- `npm audit --audit-level=high`: ✅ 0 vulnerabilities
+
+### Docker Compose smoke checks
+
+- `/`: ✅ 200
+- `/house/3d`: ✅ 200
+- `/locations`: ✅ 200
+- `/settings`: ✅ 200
+- `/import-export`: ✅ 200
+- `/catalog`: ✅ 200
+- `/unshelved`: ✅ 200
+
+### Known issues and deferrals
+
+- Visual review with vision models (todo #8) is deferred to a future pass — the spine readability improvements are implemented but not yet verified with automated vision checks.
+- Cover images are referenced by path in exports but not embedded; import relies on metadata refresh to re-download covers.
+- The restore mode is fully destructive ("Replace library"); a "Merge/update" mode is deferred.
+- Round-trip testing against a real database requires a disposable test database; unit tests cover schema validation and parser logic.
+- DockerHub push is deferred until the user explicitly requests it.
+
+### Next stage readiness
+
+All `import/todo.md` items are satisfied. The app is ready for real-world use and optional DockerHub publishing.

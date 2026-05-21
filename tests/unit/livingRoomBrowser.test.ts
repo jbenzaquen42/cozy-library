@@ -27,6 +27,10 @@ function makeSlot(id: string, rowIndex: number, depthIndex: number, copies: { id
       bookId: `book-${c.id}`,
       title: c.title,
       displayAuthor: c.displayAuthor,
+      spineColor: null,
+      copySpineColor: null,
+      coverImagePath: null,
+      shelfPosition: null,
     })),
   };
 }

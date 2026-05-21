@@ -34,6 +34,7 @@ model Book {
   seriesName     String?
   seriesNumber   String?
   coverImagePath String?
+  spineColor     String?
   metadataJson   Json     @default("{}")
   metadataSource String?
   createdAt      DateTime @default(now())
@@ -105,6 +106,8 @@ model Copy {
   bookId         String
   copyLabel      String
   locationSlotId String?
+  shelfPosition  Int?
+  spineColor     String?
   condition      String?
   notes          String?
   status         CopyStatus @default(AVAILABLE)

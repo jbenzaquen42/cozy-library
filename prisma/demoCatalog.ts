@@ -3,6 +3,7 @@ import { cacheCoverImage } from "../lib/metadata/covers";
 
 const prisma = new PrismaClient();
 const DEMO_SOURCE = "demo-hardcover";
+const DEMO_SPINE_COLORS = ["#7d8f65", "#b99068", "#6b4a34", "#8a6548", "#5c7a6b", "#a85d5d", "#4f6b8b", "#9f775a", "#d4a76a"];
 
 type DemoBook = {
   title: string;
@@ -88,6 +89,10 @@ function demoDescription(item: DemoBook) {
   ].join(" ");
 }
 
+function demoSpineColor(item: DemoBook, index = DEMO_BOOKS.findIndex((book) => book.isbn13 === item.isbn13)) {
+  return DEMO_SPINE_COLORS[Math.max(0, index) % DEMO_SPINE_COLORS.length]!;
+}
+
 async function cacheDemoCover(bookId: string, item: DemoBook) {
   const coverUrl = openLibraryCoverUrl(item.isbn13);
   const cover = await cacheCoverImage(bookId, coverUrl).catch(() => null);
@@ -112,6 +117,7 @@ async function enrichDemoBook(bookId: string, item: DemoBook) {
       language: "English",
       categories: item.categories,
       description: demoDescription(item),
+      spineColor: demoSpineColor(item),
       metadataSource: DEMO_SOURCE,
       metadataJson: {
         demoCatalog: true,
@@ -128,6 +134,7 @@ async function enrichDemoBook(bookId: string, item: DemoBook) {
           tags: item.categories,
           coverUrl: openLibraryCoverUrl(item.isbn13),
         },
+        spineColor: demoSpineColor(item),
       } satisfies Prisma.InputJsonValue,
       ...(coverImagePath ? { coverImagePath } : {}),
     },
@@ -177,6 +184,7 @@ async function seedDemoCatalog() {
         language: "English",
         categories: item.categories,
         description: demoDescription(item),
+        spineColor: demoSpineColor(item, index),
         metadataSource: DEMO_SOURCE,
         metadataJson: {
           demoCatalog: true,
@@ -192,6 +200,7 @@ async function seedDemoCatalog() {
             tags: item.categories,
             coverUrl: openLibraryCoverUrl(item.isbn13),
           },
+          spineColor: demoSpineColor(item, index),
         } satisfies Prisma.InputJsonValue,
       },
     });
@@ -226,10 +235,22 @@ async function seedDemoCatalog() {
 async function ensureDemoCatalog() {
   const existing = await prisma.book.count({ where: { OR: [{ metadataSource: DEMO_SOURCE }, { isbn13: { in: DEMO_ISBNS } }] } });
   if (existing > 0) {
+    await applyDemoSpineColors();
     console.log(`Demo catalog already present (${existing} books). Skipping demo seed.`);
     return;
   }
   await seedDemoCatalog();
+}
+
+async function applyDemoSpineColors() {
+  let updated = 0;
+  for (const [index, item] of DEMO_BOOKS.entries()) {
+    const book = await prisma.book.findUnique({ where: { isbn13: item.isbn13 }, select: { id: true, metadataSource: true, spineColor: true } });
+    if (!book || book.metadataSource !== DEMO_SOURCE || book.spineColor) continue;
+    await prisma.book.update({ where: { id: book.id }, data: { spineColor: demoSpineColor(item, index) } });
+    updated += 1;
+  }
+  if (updated > 0) console.log(`Added demo spine colors to ${updated} existing books.`);
 }
 
 async function enrichExistingDemoCatalog() {

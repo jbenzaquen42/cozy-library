@@ -1,0 +1,44 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: cozy-library-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: library
+      POSTGRES_USER: library
+      POSTGRES_PASSWORD: change-me-library-password
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U library -d library"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  web:
+    image: jbenzaquen/cozy-library:latest
+    container_name: cozy-library
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://library:change-me-library-password@postgres:5432/library
+      APP_DATA_DIR: /data
+      APP_BASE_URL: http://YOUR_NAS_IP_OR_HOSTNAME:3000
+      APP_CONTACT_EMAIL: local-use@cozy-library.invalid
+      GOOGLE_BOOKS_API_KEY: ""
+      ISBNDB_API_KEY: ""
+      HARDCOVER_API_TOKEN: ""
+      HARDCOVER_API_TOKEN_FILE: ""
+      ENABLE_OCR: "true"
+      DEMO_CATALOG: "false"
+      ALLOW_LEGACY_DATABASE_UPGRADE: "false"
+    ports:
+      - "3000:3000"
+    volumes:
+      - library-data:/data
+
+volumes:
+  postgres-data:
+  library-data:

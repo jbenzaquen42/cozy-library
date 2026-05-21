@@ -1,12 +1,12 @@
 import { PageHeader } from "@/components/ui/page-header";
 import { Card } from "@/components/ui/card";
 import { LivingRoomBookshelfBrowser } from "@/components/house/LivingRoomBookshelfBrowser";
-import { getHouseBrowserData } from "@/lib/db/houseBrowser";
+import { getHouseBrowserData, getHouseBrowserUnshelvedCopies } from "@/lib/db/houseBrowser";
 
 export const dynamic = "force-dynamic";
 
 export default async function House3DPage() {
-  const levels = await getHouseBrowserData();
+  const [levels, unshelvedCopies] = await Promise.all([getHouseBrowserData(), getHouseBrowserUnshelvedCopies()]);
 
   return (
     <div className="mx-auto max-w-7xl space-y-6">
@@ -16,7 +16,7 @@ export default async function House3DPage() {
           The coffee table has been removed from the main room composition. Use the arrows or the right-side overlay to bring each real bookshelf into the active position.
         </p>
       </Card>
-      <LivingRoomBookshelfBrowser levels={levels} />
+      <LivingRoomBookshelfBrowser levels={levels} unshelvedCopies={unshelvedCopies} />
     </div>
   );
 }

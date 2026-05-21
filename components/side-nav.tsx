@@ -10,6 +10,7 @@ import {
   House,
   MapPin,
   Users,
+  ArrowUpDown,
   Settings,
 } from "lucide-react";
 
@@ -20,7 +21,8 @@ const navItems = [
   { href: "/house", label: "House", icon: House },
   { href: "/locations", label: "Locations", icon: MapPin },
   { href: "/loans", label: "Loans", icon: Users },
-  { href: "/settings", label: "Status", icon: Settings },
+  { href: "/import-export", label: "Import / Export", icon: ArrowUpDown },
+  { href: "/settings", label: "Settings", icon: Settings },
 ];
 
 export function SideNav() {

@@ -32,7 +32,8 @@ services:
       ISBNDB_API_KEY: ""
       HARDCOVER_API_TOKEN: ""
       HARDCOVER_API_TOKEN_FILE: ""
-      DEMO_CATALOG_MODE: skip
+      DEMO_CATALOG: "false"
+      ALLOW_LEGACY_DATABASE_UPGRADE: "false"
       ENABLE_OCR: "true"
     ports:
       - "3000:3000"

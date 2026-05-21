@@ -27,6 +27,7 @@ export async function listLocations(input: ListLocationsInput = { includeSlots: 
             include: {
               slots: {
                 orderBy: [{ rowIndex: "asc" }, { depthIndex: "asc" }],
+                select: { id: true, rowIndex: true, depthIndex: true, label: true, _count: { select: { copies: true } } },
               },
             },
           },

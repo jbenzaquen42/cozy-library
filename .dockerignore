@@ -10,3 +10,5 @@ test-results
 npm-debug.log*
 internal-docs
 .data
+import/
+.data/

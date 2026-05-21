@@ -175,7 +175,7 @@ function CopyActions({ bookId, copy }: { bookId: string; copy: BookCopy }) {
 }
 
 function formatLocation(slot: Awaited<ReturnType<typeof getBook>>["copies"][number]["locationSlot"]) {
-  if (!slot) return "Unshelved queue";
+  if (!slot) return "Books waiting for a home";
   return `${slot.bookshelf.room.level.name} / ${slot.bookshelf.room.name} / ${slot.bookshelf.name} / Row ${slot.rowIndex} / ${slot.depthIndex === 1 ? "Front" : `Depth ${slot.depthIndex}`}`;
 }
 
@@ -193,7 +193,7 @@ function SlotSelect({ levels, defaultValue }: { levels: LocationLevels; defaultV
 
   return (
     <select name="locationSlotId" defaultValue={defaultValue ?? ""} className="w-full rounded-2xl border border-warm-border bg-cream px-3 py-2 text-sm">
-      <option value="">Unshelved queue</option>
+      <option value="">Books waiting for a home</option>
       {options.map((option: SlotOption) => (
         <option key={option.id} value={option.id}>{option.label}</option>
       ))}

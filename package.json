@@ -17,7 +17,11 @@
     "demo:seed": "tsx prisma/demoCatalog.ts seed",
     "demo:clear": "tsx prisma/demoCatalog.ts clear",
     "demo:enrich": "tsx prisma/demoCatalog.ts enrich",
-    "demo:ensure": "tsx prisma/demoCatalog.ts ensure"
+    "demo:ensure": "tsx prisma/demoCatalog.ts ensure",
+    "inventory:import": "tsx prisma/importInventory.ts",
+    "inventory:export:csv": "tsx prisma/inventoryCsv.ts export",
+    "inventory:import:csv": "tsx prisma/inventoryCsv.ts import",
+    "metadata:refresh-all": "tsx prisma/refreshAllMetadata.ts"
   },
   "dependencies": {
     "@prisma/client": "6.19.3",
