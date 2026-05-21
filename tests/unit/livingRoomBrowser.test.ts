@@ -416,12 +416,12 @@ describe("getShelfDisplayWidthRem", () => {
     expect(width).toBeLessThanOrEqual(48);
   });
 
-  it("caps at 54rem for very large targets", () => {
-    expect(getShelfDisplayWidthRem("Huge Shelf")).toBeLessThanOrEqual(54);
+  it("caps at 56rem for very large targets", () => {
+    expect(getShelfDisplayWidthRem("Huge Shelf")).toBeLessThanOrEqual(56);
   });
 
-  it("has a minimum width of 34rem", () => {
-    expect(getShelfDisplayWidthRem("Tiny Shelf")).toBeGreaterThanOrEqual(34);
+  it("has a minimum width of 30rem", () => {
+    expect(getShelfDisplayWidthRem("Tiny Shelf")).toBeGreaterThanOrEqual(30);
   });
 });
 

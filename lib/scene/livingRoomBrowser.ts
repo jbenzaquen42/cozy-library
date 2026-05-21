@@ -15,9 +15,13 @@ export function getTargetBooksPerRow(shelfName: string, sceneKey?: string): numb
 
 export function getShelfDisplayWidthRem(shelfName: string, sceneKey?: string): number {
   const target = getTargetBooksPerRow(shelfName, sceneKey);
-  // Calculate width so target books fit at 22px each with 6px gaps and 24px padding
-  const widthPx = target * 28 + 18;
-  return Math.min(54, Math.max(34, widthPx / 16));
+  // Bookshelf structure padding/border budget (px):
+  // outer border-[14px] = 28, outer p-3 = 24, inner grid p-2 = 16, shelf row px-3 = 24
+  const totalPaddingPx = 92;
+  const minSpineWidth = 22;
+  const gapPx = 6;
+  const widthPx = target * minSpineWidth + (target - 1) * gapPx + totalPaddingPx;
+  return Math.min(56, Math.max(30, widthPx / 16));
 }
 
 export type ShelfOption = {

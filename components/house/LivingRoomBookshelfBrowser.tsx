@@ -5,7 +5,7 @@ import type { CSSProperties } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { HouseBrowserCopy, HouseBrowserLevel, HouseBrowserSlot, HouseBrowserUnshelvedCopy } from "@/lib/db/houseBrowser";
-import { countCopies, countOccupiedSlots, countSlots, flattenShelfOptions, getBoundedShelfIndex, getShelfDisplayWidthRem, getShelfOccupancyPercent, getTargetBooksPerRow, getVisibleRowCopies, type ShelfOption } from "@/lib/scene/livingRoomBrowser";
+import { countCopies, countOccupiedSlots, countSlots, flattenShelfOptions, getBoundedShelfIndex, getShelfDisplayWidthRem, getShelfOccupancyPercent, getVisibleRowCopies, type ShelfOption } from "@/lib/scene/livingRoomBrowser";
 import { moveCopyInHouseAction, updateBookSpineColorAction, updateViewerBookshelfAction } from "@/app/house/actions";
 import { CozyViewerSettingsControls, useCozyViewerSettings } from "@/components/house/cozyViewerSettings";
 import { useCozySounds } from "@/components/house/useCozySounds";
@@ -400,13 +400,13 @@ function ActiveBookshelf({ option, direction, animate, selectedCopyId, detailCop
   const width = getShelfDisplayWidthRem(shelf.name, shelf.sceneKey);
 
   return (
-    <div className={`relative z-10 ${animationClass}`} style={{ width: `min(88vw, ${width}rem)` }}>
+    <div className={`relative z-10 w-full ${animationClass}`} style={{ maxWidth: `${width}rem` }}>
       <div className="absolute -inset-x-12 bottom-0 h-12 rounded-[50%] bg-deep-brown/25 blur-xl" />
       <div className="relative rounded-[1.8rem] border-[14px] p-3 shadow-[0_38px_80px_rgba(40,23,12,.42)]" style={{ borderColor: frameColor, backgroundColor: trimColor }}>
         <div className="absolute -top-8 left-1/2 h-7 w-32 -translate-x-1/2 rounded-t-3xl border bg-[#8a6548]" style={{ borderColor: trimColor, backgroundColor: shelfColor }} />
         <div className="grid gap-2 rounded-xl p-2" style={{ backgroundColor: shelfColor }}>
           {rows.map((rowIndex) => (
-            <ShelfRow key={rowIndex} shelf={shelf} rowIndex={rowIndex} selectedCopyId={selectedCopyId} detailCopyId={detailCopyId} pending={pending} arrangeMode={arrangeMode} onChooseBook={onChooseBook} onMoveCopy={onMoveCopy} shelfWidthRem={width} />
+            <ShelfRow key={rowIndex} shelf={shelf} rowIndex={rowIndex} selectedCopyId={selectedCopyId} detailCopyId={detailCopyId} pending={pending} arrangeMode={arrangeMode} onChooseBook={onChooseBook} onMoveCopy={onMoveCopy} />
           ))}
         </div>
       </div>
@@ -417,32 +417,54 @@ function ActiveBookshelf({ option, direction, animate, selectedCopyId, detailCop
   );
 }
 
-function ShelfRow({ shelf, rowIndex, selectedCopyId, detailCopyId, pending, arrangeMode, onChooseBook, onMoveCopy, shelfWidthRem }: { shelf: ShelfOption["shelf"]; rowIndex: number; selectedCopyId: string | null; detailCopyId: string | null; pending: boolean; arrangeMode: boolean; onChooseBook: (copy: HouseBrowserCopy) => void; onMoveCopy: (copyId: string, targetSlotId: string | null, targetPosition?: number | null) => void; shelfWidthRem: number }) {
+function ShelfRow({ shelf, rowIndex, selectedCopyId, detailCopyId, pending, arrangeMode, onChooseBook, onMoveCopy }: { shelf: ShelfOption["shelf"]; rowIndex: number; selectedCopyId: string | null; detailCopyId: string | null; pending: boolean; arrangeMode: boolean; onChooseBook: (copy: HouseBrowserCopy) => void; onMoveCopy: (copyId: string, targetSlotId: string | null, targetPosition?: number | null) => void }) {
+  const rowRef = useRef<HTMLDivElement>(null);
+  const [innerWidth, setInnerWidth] = useState(0);
+
+  useEffect(() => {
+    const el = rowRef.current;
+    if (!el) return;
+    const update = () => setInnerWidth(el.clientWidth);
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
   const rowSlots = shelf.slots.filter((slot) => slot.rowIndex === rowIndex).sort((a, b) => a.depthIndex - b.depthIndex);
   const frontSlot = rowSlots[0];
   const allRowCopies = rowSlots
     .flatMap((slot) => slot.copies.map((copy, copyIndex) => ({ slot, copy, copyIndex })))
     .sort((left, right) => (left.copy.shelfPosition ?? 9999) - (right.copy.shelfPosition ?? 9999) || left.copy.title.localeCompare(right.copy.title));
 
-  // Calculate how many books can fit at minimum readable width
-  const targetBooks = getTargetBooksPerRow(shelf.name, shelf.sceneKey);
-  const innerWidthPx = shelfWidthRem * 16 - 24; // px-3 = 12px each side
-  const gapPx = 6; // gap-1.5
+  const gapPx = 6;
   const minSpineWidth = 22;
-  const maxFitBooks = Math.max(1, Math.floor((innerWidthPx + gapPx) / (minSpineWidth + gapPx)));
-  const visibleLimit = Math.min(allRowCopies.length, Math.max(targetBooks, maxFitBooks));
+  const maxSpineWidth = 48;
+  const maxFitBooks = Math.max(1, Math.floor((innerWidth + gapPx) / (minSpineWidth + gapPx)));
+  const visibleLimit = Math.min(allRowCopies.length, maxFitBooks);
   const { visible: rowCopies, hiddenCount } = getVisibleRowCopies(shelf, rowIndex, visibleLimit);
   const nextPosition = Math.max(0, ...allRowCopies.map(({ copy }) => copy.shelfPosition ?? 0)) + 1;
 
+  // Distribute available width among visible books with natural variation
   const booksToFit = rowCopies.length;
-  const spineWidth = booksToFit > 0
-    ? Math.max(minSpineWidth, Math.min(48, Math.floor((innerWidthPx - (booksToFit - 1) * gapPx) / booksToFit)))
-    : 44;
+  const totalGapPx = Math.max(0, booksToFit - 1) * gapPx;
+  const availableForBooksPx = Math.max(booksToFit * minSpineWidth, innerWidth - totalGapPx);
+
+  // Each book gets a base width plus a hash-based variation, scaled to fit available space
+  const naturalWidths = rowCopies.map(({ copy }) => {
+    const variation = (stableHash(copy.id) % 14); // 0-13px variation
+    return minSpineWidth + variation;
+  });
+  const naturalTotal = naturalWidths.reduce((a, b) => a + b, 0);
+  const scaleFactor = naturalTotal > 0 ? availableForBooksPx / naturalTotal : 1;
+  const clampedScale = Math.min(scaleFactor, maxSpineWidth / minSpineWidth);
+  const spineWidths = naturalWidths.map((w) => Math.max(minSpineWidth, Math.min(maxSpineWidth, Math.floor(w * clampedScale))));
 
   return (
     <div className="relative min-h-32 rounded-lg border-b-[12px] border-[#5c3b28] bg-[repeating-linear-gradient(92deg,rgba(255,255,255,.08)_0_2px,transparent_2px_10px),linear-gradient(180deg,#b99068,#8a6548)] px-3 pb-2 pt-5 shadow-inner">
       <div
-        className="flex min-h-[6.5rem] items-end gap-1.5 overflow-x-auto overflow-y-hidden pb-1"
+        ref={rowRef}
+        className="flex min-h-[6.5rem] items-end gap-1.5 overflow-hidden pb-1"
         onDragOver={(event) => event.preventDefault()}
         onDrop={(event) => {
           event.preventDefault();
@@ -450,8 +472,8 @@ function ShelfRow({ shelf, rowIndex, selectedCopyId, detailCopyId, pending, arra
           if (copyId && frontSlot) onMoveCopy(copyId, frontSlot.id, nextPosition);
         }}
       >
-        {rowCopies.map(({ slot, copy, copyIndex }) => (
-          <BookSpine key={copy.id} copy={copy} slot={slot} index={copyIndex} selected={selectedCopyId === copy.id} detailed={detailCopyId === copy.id} arrangeMode={arrangeMode} onChooseBook={onChooseBook} onMoveCopy={onMoveCopy} spineWidth={spineWidth} />
+        {rowCopies.map(({ slot, copy, copyIndex }, i) => (
+          <BookSpine key={copy.id} copy={copy} slot={slot} index={copyIndex} selected={selectedCopyId === copy.id} detailed={detailCopyId === copy.id} arrangeMode={arrangeMode} onChooseBook={onChooseBook} onMoveCopy={onMoveCopy} spineWidth={spineWidths[i] ?? minSpineWidth} />
         ))}
         {hiddenCount ? (
           <span className="mb-1 grid h-14 min-w-14 place-items-center rounded-xl border border-cream/30 bg-deep-brown/35 px-2 text-[10px] font-black text-cream/85" title={`${hiddenCount} more books continue along this shelf`} aria-label={`${hiddenCount} more books continue along this shelf`}>
