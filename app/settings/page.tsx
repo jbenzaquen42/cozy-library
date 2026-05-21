@@ -4,6 +4,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { Card } from "@/components/ui/card";
 import { ErrorMessage } from "@/components/ui/error-message";
 import { CozySettingsCard } from "@/components/settings/CozySettingsCard";
+import { RefreshAllMetadataCard } from "@/components/settings/RefreshAllMetadata";
 
 export const dynamic = "force-dynamic";
 
@@ -44,6 +45,14 @@ export default function SettingsPage() {
               change the priority order on the import page.
             </p>
           </Card>
+        </section>
+
+        {/* Metadata */}
+        <section>
+          <h2 className="mb-3 font-heading text-lg font-semibold text-deep-brown">
+            Metadata
+          </h2>
+          <RefreshAllMetadataCard />
         </section>
 
         {/* Data & Privacy */}
