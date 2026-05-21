@@ -5,7 +5,7 @@ import type { CSSProperties } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { HouseBrowserCopy, HouseBrowserLevel, HouseBrowserSlot, HouseBrowserUnshelvedCopy } from "@/lib/db/houseBrowser";
-import { countCopies, countOccupiedSlots, countSlots, flattenShelfOptions, getBoundedShelfIndex, getShelfOccupancyPercent, getVisibleRowCopies, type ShelfOption } from "@/lib/scene/livingRoomBrowser";
+import { countCopies, countOccupiedSlots, countSlots, flattenShelfOptions, getBoundedShelfIndex, getShelfDisplayWidthRem, getShelfOccupancyPercent, getTargetBooksPerRow, getVisibleRowCopies, type ShelfOption } from "@/lib/scene/livingRoomBrowser";
 import { moveCopyInHouseAction, updateBookSpineColorAction, updateViewerBookshelfAction } from "@/app/house/actions";
 import { CozyViewerSettingsControls, useCozyViewerSettings } from "@/components/house/cozyViewerSettings";
 import { useCozySounds } from "@/components/house/useCozySounds";
@@ -397,7 +397,7 @@ function ActiveBookshelf({ option, direction, animate, selectedCopyId, detailCop
   const frameColor = shelf.frameColor ?? DEFAULT_FRAME;
   const shelfColor = shelf.shelfColor ?? DEFAULT_SHELF;
   const trimColor = shelf.trimColor ?? DEFAULT_TRIM;
-  const width = Math.min(44, Math.max(30, 30 + (shelf.widthUnits - 1) * 5));
+  const width = getShelfDisplayWidthRem(shelf.name, shelf.sceneKey);
 
   return (
     <div className={`relative z-10 ${animationClass}`} style={{ width: `min(88vw, ${width}rem)` }}>
@@ -406,7 +406,7 @@ function ActiveBookshelf({ option, direction, animate, selectedCopyId, detailCop
         <div className="absolute -top-8 left-1/2 h-7 w-32 -translate-x-1/2 rounded-t-3xl border bg-[#8a6548]" style={{ borderColor: trimColor, backgroundColor: shelfColor }} />
         <div className="grid gap-2 rounded-xl p-2" style={{ backgroundColor: shelfColor }}>
           {rows.map((rowIndex) => (
-            <ShelfRow key={rowIndex} shelf={shelf} rowIndex={rowIndex} selectedCopyId={selectedCopyId} detailCopyId={detailCopyId} pending={pending} arrangeMode={arrangeMode} onChooseBook={onChooseBook} onMoveCopy={onMoveCopy} />
+            <ShelfRow key={rowIndex} shelf={shelf} rowIndex={rowIndex} selectedCopyId={selectedCopyId} detailCopyId={detailCopyId} pending={pending} arrangeMode={arrangeMode} onChooseBook={onChooseBook} onMoveCopy={onMoveCopy} shelfWidthRem={width} />
           ))}
         </div>
       </div>
@@ -417,14 +417,27 @@ function ActiveBookshelf({ option, direction, animate, selectedCopyId, detailCop
   );
 }
 
-function ShelfRow({ shelf, rowIndex, selectedCopyId, detailCopyId, pending, arrangeMode, onChooseBook, onMoveCopy }: { shelf: ShelfOption["shelf"]; rowIndex: number; selectedCopyId: string | null; detailCopyId: string | null; pending: boolean; arrangeMode: boolean; onChooseBook: (copy: HouseBrowserCopy) => void; onMoveCopy: (copyId: string, targetSlotId: string | null, targetPosition?: number | null) => void }) {
+function ShelfRow({ shelf, rowIndex, selectedCopyId, detailCopyId, pending, arrangeMode, onChooseBook, onMoveCopy, shelfWidthRem }: { shelf: ShelfOption["shelf"]; rowIndex: number; selectedCopyId: string | null; detailCopyId: string | null; pending: boolean; arrangeMode: boolean; onChooseBook: (copy: HouseBrowserCopy) => void; onMoveCopy: (copyId: string, targetSlotId: string | null, targetPosition?: number | null) => void; shelfWidthRem: number }) {
   const rowSlots = shelf.slots.filter((slot) => slot.rowIndex === rowIndex).sort((a, b) => a.depthIndex - b.depthIndex);
   const frontSlot = rowSlots[0];
   const allRowCopies = rowSlots
     .flatMap((slot) => slot.copies.map((copy, copyIndex) => ({ slot, copy, copyIndex })))
     .sort((left, right) => (left.copy.shelfPosition ?? 9999) - (right.copy.shelfPosition ?? 9999) || left.copy.title.localeCompare(right.copy.title));
-  const { visible: rowCopies, hiddenCount } = getVisibleRowCopies(shelf, rowIndex, 28);
+
+  // Calculate how many books can fit at minimum readable width
+  const targetBooks = getTargetBooksPerRow(shelf.name, shelf.sceneKey);
+  const innerWidthPx = shelfWidthRem * 16 - 24; // px-3 = 12px each side
+  const gapPx = 6; // gap-1.5
+  const minSpineWidth = 22;
+  const maxFitBooks = Math.max(1, Math.floor((innerWidthPx + gapPx) / (minSpineWidth + gapPx)));
+  const visibleLimit = Math.min(allRowCopies.length, Math.max(targetBooks, maxFitBooks));
+  const { visible: rowCopies, hiddenCount } = getVisibleRowCopies(shelf, rowIndex, visibleLimit);
   const nextPosition = Math.max(0, ...allRowCopies.map(({ copy }) => copy.shelfPosition ?? 0)) + 1;
+
+  const booksToFit = rowCopies.length;
+  const spineWidth = booksToFit > 0
+    ? Math.max(minSpineWidth, Math.min(48, Math.floor((innerWidthPx - (booksToFit - 1) * gapPx) / booksToFit)))
+    : 44;
 
   return (
     <div className="relative min-h-32 rounded-lg border-b-[12px] border-[#5c3b28] bg-[repeating-linear-gradient(92deg,rgba(255,255,255,.08)_0_2px,transparent_2px_10px),linear-gradient(180deg,#b99068,#8a6548)] px-3 pb-2 pt-5 shadow-inner">
@@ -438,7 +451,7 @@ function ShelfRow({ shelf, rowIndex, selectedCopyId, detailCopyId, pending, arra
         }}
       >
         {rowCopies.map(({ slot, copy, copyIndex }) => (
-          <BookSpine key={copy.id} copy={copy} slot={slot} index={copyIndex} selected={selectedCopyId === copy.id} detailed={detailCopyId === copy.id} arrangeMode={arrangeMode} onChooseBook={onChooseBook} onMoveCopy={onMoveCopy} />
+          <BookSpine key={copy.id} copy={copy} slot={slot} index={copyIndex} selected={selectedCopyId === copy.id} detailed={detailCopyId === copy.id} arrangeMode={arrangeMode} onChooseBook={onChooseBook} onMoveCopy={onMoveCopy} spineWidth={spineWidth} />
         ))}
         {hiddenCount ? (
           <span className="mb-1 grid h-14 min-w-14 place-items-center rounded-xl border border-cream/30 bg-deep-brown/35 px-2 text-[10px] font-black text-cream/85" title={`${hiddenCount} more books continue along this shelf`} aria-label={`${hiddenCount} more books continue along this shelf`}>
@@ -466,16 +479,17 @@ function getSpineTextColor(bgColor: string | undefined): string {
   return luminance > 0.5 ? "text-deep-brown" : "text-cream";
 }
 
-function BookSpine({ copy, slot, index, selected, detailed, arrangeMode, onChooseBook, onMoveCopy }: { copy: HouseBrowserCopy; slot: HouseBrowserSlot; index: number; selected: boolean; detailed: boolean; arrangeMode: boolean; onChooseBook: (copy: HouseBrowserCopy) => void; onMoveCopy?: (copyId: string, targetSlotId: string | null, targetPosition?: number | null) => void }) {
+function BookSpine({ copy, slot, index, selected, detailed, arrangeMode, onChooseBook, onMoveCopy, spineWidth }: { copy: HouseBrowserCopy; slot: HouseBrowserSlot; index: number; selected: boolean; detailed: boolean; arrangeMode: boolean; onChooseBook: (copy: HouseBrowserCopy) => void; onMoveCopy?: (copyId: string, targetSlotId: string | null, targetPosition?: number | null) => void; spineWidth: number }) {
   const height = 56 + (stableHash(copy.id) % 32);
-  const width = Math.max(44, 34 + (stableHash(copy.title) % 14));
+  const width = spineWidth;
   const color = getCopySpineColor(copy);
   const depthOffset = slot.depthIndex > 1 ? "opacity-75 -ml-1" : "";
   const pullClass = detailed ? "-translate-y-10 scale-105 shadow-2xl" : selected ? "translate-y-4 scale-110 shadow-xl ring-4 ring-cream/45" : "hover:-translate-y-2 hover:shadow-lg";
   const tilt = ((stableHash(copy.id) % 7) - 3) * 0.35;
   const textColor = getSpineTextColor(color);
-  const isNarrow = width < 50;
-  const isWide = width > 40;
+  const isVeryNarrow = width < 26;
+  const isNarrow = width < 34;
+  const isWide = width >= 40;
 
   return (
     <button
@@ -502,7 +516,7 @@ function BookSpine({ copy, slot, index, selected, detailed, arrangeMode, onChoos
       <span className="absolute inset-x-0 bottom-1 h-px bg-black/20" />
       <span className="absolute inset-y-1 left-1 w-px bg-white/35" />
       <span className="absolute inset-y-0 right-0 w-1 bg-gradient-to-b from-[#fff7df]/70 via-[#ead8bd]/70 to-[#fff7df]/60" />
-      <span className={`absolute inset-x-1 bottom-2 top-3 flex items-center justify-center overflow-hidden text-ellipsis whitespace-nowrap [writing-mode:vertical-rl] rotate-180 ${isNarrow ? "text-[9px]" : "text-[10px]"} font-black leading-none ${textColor} drop-shadow-[0_1px_0_rgba(255,235,172,.35)] [text-shadow:0_1px_1px_rgba(0,0,0,.5)]`} title={copy.title}>
+      <span className={`absolute inset-x-1 bottom-2 top-3 flex items-center justify-center overflow-hidden text-ellipsis whitespace-nowrap [writing-mode:vertical-rl] rotate-180 ${isVeryNarrow ? "text-[7px]" : isNarrow ? "text-[8px]" : "text-[10px]"} font-black leading-none ${textColor} drop-shadow-[0_1px_0_rgba(255,235,172,.35)] [text-shadow:0_1px_1px_rgba(0,0,0,.5)]`} title={copy.title}>
         {truncate(copy.title, 28)}
       </span>
       {isWide ? <span className={`absolute bottom-2 right-2 max-h-12 overflow-hidden text-ellipsis whitespace-nowrap [writing-mode:vertical-rl] rotate-180 text-[8px] font-bold ${textColor}/70 sm:text-[9px]`} title={copy.displayAuthor}>{truncate(copy.displayAuthor, 18)}</span> : null}

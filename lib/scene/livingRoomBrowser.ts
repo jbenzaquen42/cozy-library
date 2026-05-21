@@ -2,6 +2,24 @@ import type { HouseBrowserCopy, HouseBrowserLevel, HouseBrowserShelf, HouseBrows
 
 export const MAX_VISIBLE_BOOKS_PER_ROW = 20;
 
+export function getTargetBooksPerRow(shelfName: string, sceneKey?: string): number {
+  if (sceneKey) {
+    if (sceneKey.includes("hallway.bookcase-1") || sceneKey.includes("hallway.bookcase-2") || sceneKey.includes("hallway.bookcase-3")) return 27;
+    if (sceneKey.includes("entry.entry-shelf") || sceneKey.includes("study.study-shelf")) return 22;
+  }
+  const lower = shelfName.toLowerCase();
+  if (lower.includes("rabbit") || lower.includes("wren") || lower.includes("fox")) return 27;
+  if (lower.includes("hedgehog") || lower.includes("fawn")) return 22;
+  return 20;
+}
+
+export function getShelfDisplayWidthRem(shelfName: string, sceneKey?: string): number {
+  const target = getTargetBooksPerRow(shelfName, sceneKey);
+  // Calculate width so target books fit at 22px each with 6px gaps and 24px padding
+  const widthPx = target * 28 + 18;
+  return Math.min(54, Math.max(34, widthPx / 16));
+}
+
 export type ShelfOption = {
   shelf: HouseBrowserShelf;
   roomName: string;

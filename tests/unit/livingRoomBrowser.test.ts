@@ -10,6 +10,8 @@ import {
   friendlyRoomName,
   getVisibleRowCopies,
   getBoundedShelfIndex,
+  getTargetBooksPerRow,
+  getShelfDisplayWidthRem,
 } from "../../lib/scene/livingRoomBrowser";
 
 // --- Minimal fixture helpers ---
@@ -360,6 +362,66 @@ describe("getVisibleRowCopies", () => {
     });
     const result = getVisibleRowCopies(shelf, 1);
     expect(result.visible.map((v) => v.slot.depthIndex)).toEqual([1, 2, 3]);
+  });
+});
+
+// --- getTargetBooksPerRow ---
+
+describe("getTargetBooksPerRow", () => {
+  it("returns 27 for Rabbit, Wren, and Fox shelves by name", () => {
+    expect(getTargetBooksPerRow("Rabbit Shelf")).toBe(27);
+    expect(getTargetBooksPerRow("Wren Shelf")).toBe(27);
+    expect(getTargetBooksPerRow("Fox Shelf")).toBe(27);
+  });
+
+  it("returns 27 for hallway bookcases by sceneKey", () => {
+    expect(getTargetBooksPerRow("Any Name", "shelf.upstairs.hallway.bookcase-1")).toBe(27);
+    expect(getTargetBooksPerRow("Any Name", "shelf.upstairs.hallway.bookcase-2")).toBe(27);
+    expect(getTargetBooksPerRow("Any Name", "shelf.upstairs.hallway.bookcase-3")).toBe(27);
+  });
+
+  it("returns 22 for Hedgehog and Fawn shelves by name", () => {
+    expect(getTargetBooksPerRow("Hedgehog Shelf")).toBe(22);
+    expect(getTargetBooksPerRow("Fawn Shelf")).toBe(22);
+  });
+
+  it("returns 22 for entry and study shelves by sceneKey", () => {
+    expect(getTargetBooksPerRow("Any Name", "shelf.downstairs.entry.entry-shelf")).toBe(22);
+    expect(getTargetBooksPerRow("Any Name", "shelf.upstairs.study.study-shelf")).toBe(22);
+  });
+
+  it("returns 20 for unknown shelves", () => {
+    expect(getTargetBooksPerRow("Mystery Shelf")).toBe(20);
+    expect(getTargetBooksPerRow("Custom Bookcase", "shelf.custom.unknown")).toBe(20);
+  });
+
+  it("prefers sceneKey over name when provided", () => {
+    expect(getTargetBooksPerRow("Hedgehog Shelf", "shelf.upstairs.hallway.bookcase-1")).toBe(27);
+  });
+});
+
+// --- getShelfDisplayWidthRem ---
+
+describe("getShelfDisplayWidthRem", () => {
+  it("returns wider width for 27-book shelves", () => {
+    const rabbitWidth = getShelfDisplayWidthRem("Rabbit Shelf");
+    const hedgehogWidth = getShelfDisplayWidthRem("Hedgehog Shelf");
+    expect(rabbitWidth).toBeGreaterThan(hedgehogWidth);
+    expect(rabbitWidth).toBeGreaterThanOrEqual(48);
+  });
+
+  it("returns moderate width for 22-book shelves", () => {
+    const width = getShelfDisplayWidthRem("Fawn Shelf");
+    expect(width).toBeGreaterThanOrEqual(38);
+    expect(width).toBeLessThanOrEqual(48);
+  });
+
+  it("caps at 54rem for very large targets", () => {
+    expect(getShelfDisplayWidthRem("Huge Shelf")).toBeLessThanOrEqual(54);
+  });
+
+  it("has a minimum width of 34rem", () => {
+    expect(getShelfDisplayWidthRem("Tiny Shelf")).toBeGreaterThanOrEqual(34);
   });
 });
 
